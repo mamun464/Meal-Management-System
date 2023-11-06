@@ -3,28 +3,30 @@ from django.contrib.auth.models import AbstractBaseUser,PermissionsMixin,BaseUse
 
 # Create your CustomUserManager here.
 class CustomUserManager(BaseUserManager):
-    def _create_user(self, email, password, fullName, phone_no, **extra_fields):
+    def create_user(self, email, fullName, phone_no,password=None, password2=None,**extra_fields,):
+
+        emailNormalize=self.normalize_email(email)
+        print(f"Input: {email}")
+        print(emailNormalize)
         if not phone_no:
             raise ValueError("Phone Number must be provided")
         if not password:
             raise ValueError('Password is not provided')
 
+        extra_fields.setdefault('is_staff',True)
+        extra_fields.setdefault('is_active',True)
+        extra_fields.setdefault('is_superuser',False)
+
         user = self.model(
-            email = self.normalize_email(email),
+            email=emailNormalize,
             fullName = fullName,
             phone_no = phone_no,
             **extra_fields
         )
-
         user.set_password(password)
         user.save(using=self._db)
+        # print(user)
         return user
-
-    def create_user(self, email, password, fullName, phone_no, **extra_fields):
-        extra_fields.setdefault('is_staff',True)
-        extra_fields.setdefault('is_active',True)
-        extra_fields.setdefault('is_superuser',False)
-        return self._create_user(email, password, fullName, phone_no, password, **extra_fields)
 
     def create_superuser(self, email, password, fullName, phone_no, **extra_fields):
         extra_fields.setdefault('is_staff',True)
@@ -43,9 +45,9 @@ class CustomUser(AbstractBaseUser,PermissionsMixin):
     # address = models.CharField( max_length=250)
     username = None
     fullName = models.CharField(max_length=100, null=False)
-    email = models.EmailField(max_length=100, null=False,unique=True)
+    email = models.EmailField(db_index=True, unique=True, max_length=254)
     user_profile_img = models.ImageField(upload_to="profile",null=True)
-    phone_no=models.CharField(max_length=20, null=False,unique=True)
+    phone_no=models.CharField(db_index=True,max_length=20, null=False,unique=True)
 
     is_staff = models.BooleanField(default=True) # must needed, otherwise you won't be able to loginto django-admin.
     is_active = models.BooleanField(default=True) # must needed, otherwise you won't be able to loginto django-admin.
@@ -57,8 +59,8 @@ class CustomUser(AbstractBaseUser,PermissionsMixin):
     REQUIRED_FIELDS = ['email','fullName']
 
     class Meta:
-        verbose_name = 'User'
-        verbose_name_plural = 'Users'
+        verbose_name = 'CustomUser'
+        verbose_name_plural = 'CustomUsers'
 
 
     def __str__(self):
