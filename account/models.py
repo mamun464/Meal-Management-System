@@ -1,13 +1,14 @@
 from django.db import models
+import os
 from django.contrib.auth.models import AbstractBaseUser,PermissionsMixin,BaseUserManager
 
 # Create your CustomUserManager here.
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, fullName, phone_no,password=None, password2=None,**extra_fields,):
 
-        emailNormalize=self.normalize_email(email)
+       
         print(f"Input: {email}")
-        print(emailNormalize)
+        
         if not phone_no:
             raise ValueError("Phone Number must be provided")
         if not password:
@@ -18,7 +19,7 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault('is_superuser',False)
 
         user = self.model(
-            email=emailNormalize,
+            email=email.lower(),
             fullName = fullName,
             phone_no = phone_no,
             **extra_fields
@@ -33,6 +34,9 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault('is_active',True)
         extra_fields.setdefault('is_superuser',True)
         return self._create_user(email, password, fullName, phone_no, **extra_fields)
+    
+
+
 
 # Create your User Model here.
 class CustomUser(AbstractBaseUser,PermissionsMixin):
@@ -45,13 +49,16 @@ class CustomUser(AbstractBaseUser,PermissionsMixin):
     # address = models.CharField( max_length=250)
     username = None
     fullName = models.CharField(max_length=100, null=False)
-    email = models.EmailField(db_index=True, unique=True, max_length=254)
+    email = models.EmailField(db_index=True, unique=True,null=False, max_length=254)
     user_profile_img = models.ImageField(upload_to="profile",null=True)
     phone_no=models.CharField(db_index=True,max_length=20, null=False,unique=True)
 
     is_staff = models.BooleanField(default=True) # must needed, otherwise you won't be able to loginto django-admin.
     is_active = models.BooleanField(default=True) # must needed, otherwise you won't be able to loginto django-admin.
     is_superuser = models.BooleanField(default=False) # this field we inherit from PermissionsMixin.
+
+
+    
 
     objects = CustomUserManager()
 
@@ -76,6 +83,16 @@ class CustomUser(AbstractBaseUser,PermissionsMixin):
         # Simplest possible answer: Yes, always
         return True
 
+    
+    def save(self, *args, **kwargs):
+        # Check if an old image exists
+        if self.pk:
+            old_instance = self.__class__.objects.get(pk=self.pk)
+            if old_instance.user_profile_img:
+                # Delete the old image file from the filesystem
+                if os.path.isfile(old_instance.user_profile_img.path):
+                    os.remove(old_instance.user_profile_img.path)
+        super().save(*args, **kwargs)
     # @property
     # def is_staff(self):
     #     "Is the user a member of staff?"

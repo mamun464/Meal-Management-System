@@ -5,6 +5,7 @@ from django.utils.encoding import smart_str,force_bytes,DjangoUnicodeDecodeError
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from account.utils import Util
+from django import forms
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
 
@@ -17,11 +18,16 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             'password':{'write_only':True}
         }
 
-    #validate password and confirm password is same
+    
     def validate(self, attrs):
         password = attrs.get('password')
         password2 = attrs.get('password2')
-
+        email = (attrs.get('email')).lower()
+        print('Email-From-Validation:', email)
+        #validate password and confirm password is same
+        if CustomUser.objects.filter(email=email).exists():
+            raise forms.ValidationError(f"{email} with this email already exists.")
+        #validate password and confirm password is same
         if(password != password2):
             raise serializers.ValidationError("Confirm password not match with password!")
 
@@ -127,6 +133,12 @@ class UserPasswordRestSerializer(serializers.Serializer):
         except DjangoUnicodeDecodeError as identifier:
             PasswordResetTokenGenerator().check_token(user,token)
             raise ValidationError("Token is not Valid or Expired")
+        
+
+class UserProfileEditSerializer(serializers.ModelSerializer):
+     class Meta:
+          model = CustomUser
+          fields='__all__'
     
 
 

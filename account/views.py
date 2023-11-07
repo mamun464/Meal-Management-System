@@ -2,11 +2,13 @@ from django.shortcuts import render
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
-from account.serializer import UserRegistrationSerializer ,UserLoginSerializer,UserProfileSerializer,UserChangePasswordSerializer,SendPasswordResetEmailSerializer,UserPasswordRestSerializer
+from account.serializer import UserRegistrationSerializer ,UserLoginSerializer,UserProfileSerializer,UserChangePasswordSerializer,SendPasswordResetEmailSerializer,UserPasswordRestSerializer,UserProfileEditSerializer
 from django.contrib.auth import authenticate
 from account.renderers import UserRenderer
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated,IsAdminUser
+from account.models import CustomUser
+from rest_framework.renderers import JSONRenderer
 
 
 
@@ -82,6 +84,51 @@ class UserPasswordResetView(APIView):
         if serializer.is_valid(raise_exception=True):
             return Response({'msg': 'Password Reset successfully'},status=status.HTTP_200_OK)
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+    
+#for deleted user
+class UserDeleteView(APIView):
+    def delete(self, request, phone):
+        # IsAdminUser applited
+        self.permission_classes = [IsAdminUser]
+        self.renderer_classes = [UserRenderer]
+        self.check_permissions(request)
+
+        try:
+             user=CustomUser.objects.get(phone_no=phone)
+        except CustomUser.DoesNotExist:
+            # raise Http404("User not found: The requested user does not exist")
+            return Response({'errors': f"{phone} isn't Found"}, status=status.HTTP_404_NOT_FOUND)
+            
+
+        user.delete()
+        return Response({'msg': f'{user.fullName} Deleted from your system'},status=status.HTTP_204_NO_CONTENT)
+    
+
+class UserEditView(APIView):
+
+    # IsAuthenticated applited
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+    # def get(self, request, format=None):
+    #     serializer = UserProfileSerializer(request.user)
+        
+    #     return Response(serializer.data,status= status.HTTP_200_OK)
+
+    def put(self,request):
+        serializer = UserProfileEditSerializer(request.user)
+        userData=serializer.data
+        user_id = userData['id']
+        try:
+            user=CustomUser.objects.get(pk=user_id)
+        except CustomUser.DoesNotExist:
+             return Response(status=status.HTTP_404_NOT_FOUND)
+        
+        serializer=UserProfileEditSerializer(user,data=request.data,  partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                 
 
 
