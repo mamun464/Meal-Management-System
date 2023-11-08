@@ -18,3 +18,9 @@ class MealEntrySerializer(serializers.ModelSerializer):
         model = MealHistory
         fields = ('user', 'date', 'lunch', 'dinner')
 
+
+class MealEditSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MealHistory
+        fields = ('date', 'user', 'lunch', 'dinner')
+

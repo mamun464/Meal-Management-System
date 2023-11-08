@@ -1,13 +1,14 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
 from account.renderers import UserRenderer
-from HostelApp.serializer import MonthlyMealSerializer,MealEntrySerializer
+from HostelApp.serializer import MonthlyMealSerializer,MealEntrySerializer,MealEditSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from .models import MealHistory
 from django.db.models import Sum
 from HostelApp.Calculationhelper import CallMonthlyTotalMealAPI
 import math
+import datetime
 
 # Create your views here.
 class MonthlyMealView(APIView):
@@ -86,3 +87,37 @@ class MealEntryView(APIView):
             mealEntry = serializer.save()
             return Response({'msg':'Successfully added Meal'},status=status.HTTP_201_CREATED)
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+    
+
+class MealEditView(APIView):
+
+    def put(self, request):
+        user_id = request.data.get('user_id', None)
+        date = request.data.get('date', None)
+        lunch = request.data.get('lunch')
+        dinner = request.data.get('dinner')
+
+        # Validate the date format
+        try:
+            meal_date = datetime.datetime.strptime(date, '%Y-%m-%d').date()
+        except ValueError:
+            return Response({'error': 'Invalid date format. Date must be in YYYY-MM-DD format.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if user_id is None or date is None:
+            return Response({'error': 'userId and date are required in the request body.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+                # Check that at least one of lunch or dinner is provided
+        if lunch is None and dinner is None:
+            return Response({'error': 'At least one of lunch or dinner must be provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            meal_entry = MealHistory.objects.get(user_id=user_id, date=meal_date)
+        except MealHistory.DoesNotExist:
+            return Response({'error': 'Meal entry not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = MealEditSerializer(meal_entry, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'msg': 'Successfully Edited Meal.','data':serializer.data}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
