@@ -1,6 +1,6 @@
 
 # from django.contrib import admin
-from django.urls import path,include
+from django.urls import path
 
 from account.views import UserRegistrationView,UserLoginView,UserProfileView,UserPasswordChangeView,SendPasswordResetEmailView,UserPasswordResetView,UserDeleteView,UserEditView
 
