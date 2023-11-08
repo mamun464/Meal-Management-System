@@ -1,10 +1,11 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
 from account.renderers import UserRenderer
-from HostelApp.serializer import MonthlyMealSerializer,MealEntrySerializer,MealEditSerializer
+from HostelApp.serializer import MonthlyMealSerializer,MealEntrySerializer,MealEditSerializer,MonthlySingleUserDetailsSerializers
+from account.serializer import UserProfileSerializer
 from rest_framework.response import Response
 from rest_framework import status
-from .models import MealHistory
+from .models import MealHistory,CustomUser
 from django.db.models import Sum
 from HostelApp.Calculationhelper import CallMonthlyTotalMealAPI
 import math
@@ -90,7 +91,7 @@ class MealEntryView(APIView):
     
 
 class MealEditView(APIView):
-
+    renderer_classes = [UserRenderer]
     def put(self, request):
         user_id = request.data.get('user_id', None)
         date = request.data.get('date', None)
@@ -121,3 +122,74 @@ class MealEditView(APIView):
             serializer.save()
             return Response({'msg': 'Successfully Edited Meal.','data':serializer.data}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class MonthlySingleUserDetailsView(APIView):
+    renderer_classes = [UserRenderer]
+    def get(self, request):
+        user_id = request.query_params.get('user')
+        year = request.query_params.get('year')
+        month = request.query_params.get('month')
+
+        try:
+            year = int(year)
+            month = int(month)
+        except ValueError:
+            return Response({'error': 'Year and month must be valid integers.'}, status=400)
+        
+
+        if not user_id or not year or not month:
+            return Response({'error': 'user, year, and month are required query parameters.'}, status=400)
+        # Check if year is within a valid range
+        current_year = datetime.datetime.now().year
+        if year < 1900 or year > current_year:
+            return Response({'error': 'Year is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if month is within a valid range (1 to 12)
+        if month < 1 or month > 12:
+            return Response({'error': 'Month is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get the user instance from the CustomUser model
+        try:
+            user = CustomUser.objects.get(id=user_id)
+
+        except CustomUser.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=404)
+
+        # Filter MealHistory entries for the specific user, year, and month
+        meal_entries = MealHistory.objects.filter(
+            user_id=user_id,
+            date__year=year,
+            date__month=month
+        )
+        # Include user details in the response
+        user_details = {
+            'user_id': user.id,
+            'fullName': user.fullName,
+            'email': user.email,
+            'phone_no': user.phone_no,
+        }
+
+        meal_serializer = MonthlySingleUserDetailsSerializers(meal_entries, many=True)
+
+        MonthlyDateWiseMeal =  meal_serializer.data
+        monthly_total_meal_single_user=0
+        if len(MonthlyDateWiseMeal) != 0:
+            for eachDayMeal in MonthlyDateWiseMeal:
+                monthly_total_meal_single_user+=float(eachDayMeal['meal_sum_per_day'])
+
+        response_data = {
+            'user_details': user_details,
+            'total_meal_monthly' : monthly_total_meal_single_user,
+            'total_taka_submit': 'Coming Soon',
+            'extra_cost': 'Coming Soon',
+            'rest_of_submited_amount': 'coming soon',
+            'real_rate' : 'Coming Soon',
+            'remain_balance' : 'Coming Soon',
+            'due' : 'Coming Soon',
+            'date_wise_meal': MonthlyDateWiseMeal,
+        }
+
+        # Serialize the data
+
+        return Response(response_data)

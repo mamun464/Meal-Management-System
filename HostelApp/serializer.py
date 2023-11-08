@@ -24,3 +24,9 @@ class MealEditSerializer(serializers.ModelSerializer):
         model = MealHistory
         fields = ('date', 'user', 'lunch', 'dinner')
 
+class MonthlySingleUserDetailsSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = MealHistory
+        fields = ('date', 'user',  'lunch', 'dinner', 'meal_sum_per_day')
+
+
