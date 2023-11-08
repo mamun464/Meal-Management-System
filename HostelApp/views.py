@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
 from account.renderers import UserRenderer
-from HostelApp.serializer import MonthlyMealSerializer
+from HostelApp.serializer import MonthlyMealSerializer,MealEntrySerializer
 from rest_framework.response import Response
 from rest_framework import status
 from .models import MealHistory
@@ -45,9 +45,9 @@ class MonthlyMealView(APIView):
 class MealRateView(APIView):
 
     def get(self, request):
-        monthly_meal_total_expenses =1517
+        monthly_meal_total_expenses =2000
         year='2023'
-        month='10'
+        month='11'
         Total_meal_response=CallMonthlyTotalMealAPI(year=year, month=month)
         #return Response(Total_meal_monthly['success'], status=status.HTTP_200_OK)
 
@@ -60,14 +60,14 @@ class MealRateView(APIView):
                 meal_rate = monthly_meal_total_expenses/Total_meal_monthly
                 meal_rate_rounded = round(meal_rate,2)
                 msg = {
-                    'Meal Rate': meal_rate_rounded,
+                    'Meal_Rate': meal_rate_rounded,
                     
                 }
                 return Response(msg, status=status.HTTP_200_OK)
             
             else:
                 msg ={
-                    'Meal Rate':'No Meal Available'
+                    'Meal_Rate':'No Meal Available'
                     }
 
                 return Response(msg, status=status.HTTP_200_OK)
@@ -76,3 +76,13 @@ class MealRateView(APIView):
         else:
 
             return Response(Total_meal_response, status=status.HTTP_400_BAD_REQUEST)
+
+class MealEntryView(APIView):
+    renderer_classes = [UserRenderer]
+    def post(self,request,format=None):
+        serializer = MealEntrySerializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            mealEntry = serializer.save()
+            return Response({'msg':'Successfully added Meal'},status=status.HTTP_201_CREATED)
+        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
