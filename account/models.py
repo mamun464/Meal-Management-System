@@ -41,12 +41,6 @@ class CustomUserManager(BaseUserManager):
 # Create your User Model here.
 class CustomUser(AbstractBaseUser,PermissionsMixin):
     # Abstractbaseuser has password, last_login, is_active by default
-
-    # email = models.EmailField(db_index=True, unique=True, max_length=254)
-    # first_name = models.CharField(max_length=240)
-    # last_name = models.CharField(max_length=255)
-    # mobile = models.CharField(max_length=50)
-    # address = models.CharField( max_length=250)
     username = None
     fullName = models.CharField(max_length=100, null=False)
     email = models.EmailField(db_index=True, unique=True,null=False, max_length=254)
@@ -71,7 +65,7 @@ class CustomUser(AbstractBaseUser,PermissionsMixin):
 
 
     def __str__(self):
-            return self.email
+            return f"{self.fullName} ({self.phone_no})"
 
     def has_perm(self, perm, obj=None):
         "Does the user have a specific permission?"
