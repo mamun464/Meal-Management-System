@@ -10,6 +10,7 @@ from django.db.models import Sum
 from django.db.models.functions import ExtractMonth, ExtractYear
 from account.models import CustomUser
 
+
 class MealHistory(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='meal_history')
     date = models.DateField()
@@ -41,3 +42,9 @@ class MealHistory(models.Model):
         )
 
         return total_meal_sum#total_meal_sum['total'] or 0
+    
+class BazarHistory(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.PROTECT, related_name='bazar_history')
+    date = models.DateField(null=False)
+    daily_bazar_cost = models.DecimalField(max_digits=10, decimal_places=2, null=False)
+    bazar_details= models.TextField(null=True, blank=True)

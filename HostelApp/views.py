@@ -1,13 +1,13 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
 from account.renderers import UserRenderer
-from HostelApp.serializer import MonthlyMealSerializer,MealEntrySerializer,MealEditSerializer,MonthlySingleUserDetailsSerializers
+from HostelApp.serializer import MonthlyMealSerializer,MealEntrySerializer,MealEditSerializer,MonthlySingleUserDetailsSerializers,BazarEntrySerializer,AllBazarListSerializer
 from account.serializer import UserProfileSerializer
 from rest_framework.response import Response
 from rest_framework import status
-from .models import MealHistory,CustomUser
+from .models import MealHistory,CustomUser,BazarHistory
 from django.db.models import Sum
-from HostelApp.Calculationhelper import CallMonthlyTotalMealAPI
+from HostelApp.Calculationhelper import CallMonthlyTotalMealAPI,CallMealRateAPI,CallBazarListAPI
 import math
 import datetime
 
@@ -46,20 +46,35 @@ class MonthlyMealView(APIView):
 
 class MealRateView(APIView):
 
-    def get(self, request):
-        monthly_meal_total_expenses =2000
-        year='2023'
-        month='11'
+    def post(self, request):
+        
+        monthly_total_bazar_cost =0
+        
+        year = request.query_params.get('year')
+        month = request.query_params.get('month')
         Total_meal_response=CallMonthlyTotalMealAPI(year=year, month=month)
+        bazar_List_response=CallBazarListAPI(year=year, month=month)
         #return Response(Total_meal_monthly['success'], status=status.HTTP_200_OK)
+
+        if bazar_List_response['success']:
+            allBazarObject=bazar_List_response['data']
+            datewise_bazar=allBazarObject['data']
+            for eachBazar in datewise_bazar:
+                eachBazarCost= eachBazar['daily_bazar_cost']
+                monthly_total_bazar_cost += float(eachBazarCost)
+                
+        else:
+            # print("Error came form Bazar list Else")
+            return Response(bazar_List_response, status=status.HTTP_400_BAD_REQUEST)
+        
 
         if Total_meal_response['success'] :
             Total_meal_monthly=Total_meal_response['data']['Total Meal']
 
-            print(type(Total_meal_monthly))
+            # print(type(Total_meal_monthly))
 
             if Total_meal_monthly > 0:
-                meal_rate = monthly_meal_total_expenses/Total_meal_monthly
+                meal_rate = monthly_total_bazar_cost/Total_meal_monthly
                 meal_rate_rounded = round(meal_rate,2)
                 msg = {
                     'Meal_Rate': meal_rate_rounded,
@@ -69,7 +84,7 @@ class MealRateView(APIView):
             
             else:
                 msg ={
-                    'Meal_Rate':'No Meal Available'
+                    'Meal_Rate':0
                     }
 
                 return Response(msg, status=status.HTTP_200_OK)
@@ -128,9 +143,12 @@ class MonthlySingleUserDetailsView(APIView):
     renderer_classes = [UserRenderer]
     def get(self, request):
         user_id = request.query_params.get('user')
-        year = request.query_params.get('year')
-        month = request.query_params.get('month')
+        year = request.query_params.get('year', None)
+        month = request.query_params.get('month', None)
 
+        
+        if not user_id or not year or not month:
+            return Response({'error': 'user, year, and month are required query parameters.'}, status=400)
         try:
             year = int(year)
             month = int(month)
@@ -138,15 +156,15 @@ class MonthlySingleUserDetailsView(APIView):
             return Response({'error': 'Year and month must be valid integers.'}, status=400)
         
 
-        if not user_id or not year or not month:
-            return Response({'error': 'user, year, and month are required query parameters.'}, status=400)
+        
         # Check if year is within a valid range
         current_year = datetime.datetime.now().year
+        current_month = datetime.datetime.now().month
         if year < 1900 or year > current_year:
             return Response({'error': 'Year is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Check if month is within a valid range (1 to 12)
-        if month < 1 or month > 12:
+        if month < 1 or month > 12 or current_month < month:
             return Response({'error': 'Month is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Get the user instance from the CustomUser model
@@ -155,6 +173,21 @@ class MonthlySingleUserDetailsView(APIView):
 
         except CustomUser.DoesNotExist:
             return Response({'error': 'User not found.'}, status=404)
+        
+        
+        bazar_List_response=CallBazarListAPI(year=year, month=month)
+        #return Response(Total_meal_monthly['success'], status=status.HTTP_200_OK)
+
+        #user wise bazar count
+        going_for_bazar=0
+        if bazar_List_response['success']:
+            allBazarObject=bazar_List_response['data']
+            datewise_bazar=allBazarObject['data']
+            for eachBazar in datewise_bazar:
+                user_id_in_bazar= eachBazar['user']
+                if user_id_in_bazar == int(user_id):
+                    going_for_bazar += 1
+                
 
         # Filter MealHistory entries for the specific user, year, and month
         meal_entries = MealHistory.objects.filter(
@@ -172,24 +205,112 @@ class MonthlySingleUserDetailsView(APIView):
 
         meal_serializer = MonthlySingleUserDetailsSerializers(meal_entries, many=True)
 
+        meal_rate_response = CallMealRateAPI(year=year, month=month)
+        
+        meal_rate_floot=0
+        if meal_rate_response['success']: 
+            meal_rate_floot = meal_rate_response['data']['Meal_Rate']
+
+        
+
         MonthlyDateWiseMeal =  meal_serializer.data
         monthly_total_meal_single_user=0
         if len(MonthlyDateWiseMeal) != 0:
             for eachDayMeal in MonthlyDateWiseMeal:
                 monthly_total_meal_single_user+=float(eachDayMeal['meal_sum_per_day'])
 
+        meal_cost_monthly= round((meal_rate_floot * monthly_total_meal_single_user),2)
+
         response_data = {
             'user_details': user_details,
-            'total_meal_monthly' : monthly_total_meal_single_user,
-            'total_taka_submit': 'Coming Soon',
-            'extra_cost': 'Coming Soon',
-            'rest_of_submited_amount': 'coming soon',
-            'real_rate' : 'Coming Soon',
-            'remain_balance' : 'Coming Soon',
-            'due' : 'Coming Soon',
+            'user_accounts':{
+                'going_for_bazar': going_for_bazar,
+                'total_meal_monthly' : monthly_total_meal_single_user,
+                'total_taka_submit': 'Coming Soon',
+                'extra_cost': 'Coming Soon',
+                # 'real_rate2' : meal_rate_floot,#meal_rate_response,
+                'real_rate' : meal_rate_response,
+                'meal_cost_monthly': meal_cost_monthly,
+                'remain_balance' : 'Coming Soon',
+                'due' : 'Coming Soon',
+            },
+            'access_permissions':"Coming Soon",
             'date_wise_meal': MonthlyDateWiseMeal,
         }
 
         # Serialize the data
 
-        return Response(response_data)
+        return Response(response_data,status=status.HTTP_200_OK)
+    
+
+
+class BazarEntryView(APIView):
+    renderer_classes = [UserRenderer]
+    def post(self, request):
+        try:
+            # Get the phone number from the request data
+            phone_no = request.data['phone_no']
+            bazar_cost=request.data['daily_bazar_cost']
+            date = request.data['date']
+
+            # Get the user ID using the phone number
+            user = CustomUser.objects.get(phone_no=phone_no)
+            user_id = user.id
+        except CustomUser.DoesNotExist:
+            return Response({'error':{'message': f'User with phone number {phone_no} not found'}})
+        except Exception as e:
+            return Response({'error':{'message': f'An unexpected error occurred: {e}'}})
+        # Handle the optional bazar_details field
+        bazar_details = request.data.get('bazar_details', None)
+        # Create the BazarHistory instance
+        bazar_history_data = {
+            'user': user_id,
+            'date': date,
+            'daily_bazar_cost': bazar_cost,
+            'bazar_details': bazar_details,
+        }
+        serializer = BazarEntrySerializer(data=bazar_history_data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        # Return a success response
+        return Response({'status': 'Bazar Entry successful'})
+    
+class AllBazarListView(APIView):
+    renderer_classes = [UserRenderer]
+    def get(self, request):
+        year = request.query_params.get('year')
+        month = request.query_params.get('month')
+
+        if not year or not month:
+            return Response({'error': 'year, and month are required query parameters.'}, status=400)
+
+        try:
+            year = int(year)
+            month = int(month)
+        except ValueError:
+            return Response({'error': 'Year and month must be valid integers.'}, status=400)
+        
+        # Check if year is within a valid range
+        current_year = datetime.datetime.now().year
+        current_month = datetime.datetime.now().month
+        if year < 1900 or year > current_year:
+            return Response({'error': 'Year is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if month is within a valid range (1 to 12)
+        if month < 1 or month > 12 or current_month < month:
+            return Response({'error': 'Month is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+        # Filter MealHistory entries for the specific user, year, and month
+        bazar_entries = BazarHistory.objects.filter(
+            date__year=year,
+            date__month=month
+        )
+
+        bazar_serializer = AllBazarListSerializer(bazar_entries, many=True)
+        return Response({'Success':True,'data':bazar_serializer.data},status=status.HTTP_200_OK)
+    
+
+class MonthlyAllUserDetailsView(APIView):
+    pass

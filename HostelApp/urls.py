@@ -1,7 +1,7 @@
 from django.urls import path
 
 from account.views import UserLoginView
-from HostelApp.views import MonthlyMealView,MealRateView,MealEntryView,MealEditView,MonthlySingleUserDetailsView
+from HostelApp.views import MonthlyMealView,MealRateView,MealEntryView,MealEditView,MonthlySingleUserDetailsView,BazarEntryView,AllBazarListView,MonthlyAllUserDetailsView
 
 urlpatterns = [
     path('all-meal-monthly/', MonthlyMealView.as_view(),name='all-meal-monthly'),
@@ -9,6 +9,9 @@ urlpatterns = [
     path('meal-entry/', MealEntryView.as_view(),name='meal-entry'),
     path('meal-edit/', MealEditView.as_view(),name='meal-edit'),
     path('monthly-user-details/', MonthlySingleUserDetailsView.as_view(),name='monthly-user-details'),
+    path('bazar-entry/', BazarEntryView.as_view(),name='bazar-entry'),
+    path('monthly-allbazar-list/', AllBazarListView.as_view(),name='monthly-allbazar-list'),
+    path('monthly-all-user-details/', MonthlyAllUserDetailsView.as_view(),name='monthly-all-user-details'),
  
     
 ]

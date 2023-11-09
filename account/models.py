@@ -44,7 +44,7 @@ class CustomUser(AbstractBaseUser,PermissionsMixin):
     username = None
     fullName = models.CharField(max_length=100, null=False)
     email = models.EmailField(db_index=True, unique=True,null=False, max_length=254)
-    user_profile_img = models.ImageField(upload_to="profile",null=True)
+    user_profile_img = models.ImageField(upload_to="profile",null=True,blank=True)
     phone_no=models.CharField(db_index=True,max_length=20, null=False,unique=True)
 
     is_staff = models.BooleanField(default=True) # must needed, otherwise you won't be able to loginto django-admin.
