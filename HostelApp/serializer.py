@@ -1,6 +1,6 @@
 
 from rest_framework import serializers
-from .models import MealHistory,BazarHistory,CustomUser
+from .models import MealHistory,BazarHistory,CustomUser,ExtraExpensesHistory,UserPaymentHistory
 
 class MonthlyMealSerializer(serializers.ModelSerializer):
     class Meta:
@@ -27,7 +27,7 @@ class MealEditSerializer(serializers.ModelSerializer):
 class MonthlySingleUserDetailsSerializers(serializers.ModelSerializer):
     class Meta:
         model = MealHistory
-        fields = ('date', 'user',  'lunch', 'dinner', 'meal_sum_per_day')
+        fields = ('id','date', 'user',  'lunch', 'dinner', 'meal_sum_per_day')
 
 
 
@@ -40,4 +40,16 @@ class AllBazarListSerializer(serializers.ModelSerializer):
     class Meta:
         model = BazarHistory
         fields = ['date', 'daily_bazar_cost', 'bazar_details','user']
+
+
+class ExtraExpensesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExtraExpensesHistory
+        fields = [ 'date', 'expense_name', 'expense_amount']
+
+class AllExtraExpenseSerializer(serializers.ModelSerializer): 
+        class Meta:
+            model = ExtraExpensesHistory
+            fields = [ 'id','date', 'expense_name', 'expense_amount']
+
 

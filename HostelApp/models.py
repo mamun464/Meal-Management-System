@@ -12,7 +12,7 @@ from account.models import CustomUser
 
 
 class MealHistory(models.Model):
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='meal_history')
+    user = models.ForeignKey(CustomUser, on_delete=models.PROTECT, related_name='meal_history')
     date = models.DateField()
     lunch = models.DecimalField(max_digits=6, decimal_places=2, default=0)
     dinner = models.DecimalField(max_digits=6, decimal_places=2, default=0)
@@ -48,3 +48,16 @@ class BazarHistory(models.Model):
     date = models.DateField(null=False)
     daily_bazar_cost = models.DecimalField(max_digits=10, decimal_places=2, null=False)
     bazar_details= models.TextField(null=True, blank=True)
+
+class UserPaymentHistory(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.PROTECT, related_name='payment_history')
+    date = models.DateField(null=False)
+    submitted_amount = models.DecimalField(max_digits=10, decimal_places=2, null=False)
+
+class ExtraExpensesHistory(models.Model):
+    date = models.DateField(null=False)
+    expense_name = models.CharField(max_length=100, null=False)
+    expense_amount = models.DecimalField(max_digits=10, decimal_places=2, null=False)
+
+
+

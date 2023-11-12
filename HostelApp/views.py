@@ -1,15 +1,144 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
 from account.renderers import UserRenderer
-from HostelApp.serializer import MonthlyMealSerializer,MealEntrySerializer,MealEditSerializer,MonthlySingleUserDetailsSerializers,BazarEntrySerializer,AllBazarListSerializer
+from HostelApp.serializer import MonthlyMealSerializer,MealEntrySerializer,MealEditSerializer,MonthlySingleUserDetailsSerializers,BazarEntrySerializer,AllBazarListSerializer,ExtraExpensesSerializer,AllExtraExpenseSerializer
 from account.serializer import UserProfileSerializer
+from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework import status
-from .models import MealHistory,CustomUser,BazarHistory
+from .models import MealHistory,CustomUser,BazarHistory,ExtraExpensesHistory
 from django.db.models import Sum
-from HostelApp.Calculationhelper import CallMonthlyTotalMealAPI,CallMealRateAPI,CallBazarListAPI
+from HostelApp.Calculationhelper import CallMonthlyTotalMealAPI,CallMealRateAPI,CallBazarListAPI,CallMonthlySingleUserDetailsAPI,CallExtraCostAPI
 import math
-import datetime
+import datetime as dt_datetime
+# from datetime import datetime as dt_datetime, date as dt_date
+from datetime import datetime, date
+
+
+from django.core.serializers.json import DjangoJSONEncoder
+
+
+
+
+
+
+class UserDetailsMixin:
+    def get_user_data(self, user, request):
+        # Your existing logic for MonthlySingleUserDetailsView
+
+        year = request.query_params.get('year', None)
+        month = request.query_params.get('month', None)
+        # ...
+        bazar_List_response=CallBazarListAPI(year=year, month=month)
+
+        extra_expense_List_response=CallExtraCostAPI(year=year, month=month)
+        #return Response(Total_meal_monthly['success'], status=status.HTTP_200_OK)
+
+        #user wise bazar count
+        going_for_bazar=0
+        if bazar_List_response['success']:
+            allBazarObject=bazar_List_response['data']
+            datewise_bazar=allBazarObject['data']
+            for eachBazar in datewise_bazar:
+                user_id_in_bazar= eachBazar['user']
+                if user_id_in_bazar == user.id:
+                    going_for_bazar += 1
+
+
+
+       
+        totall_monthly_extra_expense=0
+        if extra_expense_List_response['success']:
+            allExpenseObject=extra_expense_List_response['data']
+            datewise_expese=allExpenseObject['data']
+            for eachExpese in datewise_expese:
+                    totall_monthly_extra_expense += float(eachExpese['expense_amount'])
+
+        
+        person_in_month= CustomUser.objects.filter(
+            is_active = True
+        ).count()
+        
+
+        cost_data={
+            "total_extra_cost":totall_monthly_extra_expense,
+             "Active_User" : person_in_month,
+             "extra_cost_per_head" : totall_monthly_extra_expense/person_in_month,
+
+            "datewise_expese":datewise_expese,
+           
+        }
+
+        # Filter MealHistory entries for the specific user, year, and month
+        meal_entries = MealHistory.objects.filter(
+            user_id=user.id,
+            date__year=year,
+            date__month=month
+        )
+        # Include user details in the response
+        user_details = {
+            'user_id': user.id,
+            'fullName': user.fullName,
+            'profile_img': user.user_profile_img.url if user.user_profile_img else None,
+            'email': user.email,
+            'phone_no': user.phone_no,
+            'last_login': user.last_login,
+            'last_login': self.serialize_datetime(user.last_login),
+        }
+
+        permissions ={
+            'is_active': user.is_active,
+            'is_staff': user.is_staff,
+            'is_superuser': user.is_superuser,
+        }
+
+        meal_serializer = MonthlySingleUserDetailsSerializers(meal_entries, many=True)
+
+        meal_rate_response = CallMealRateAPI(year=year, month=month)
+        
+        meal_rate_floot=0
+        if meal_rate_response['success']: 
+            meal_rate_floot = meal_rate_response['data']['Meal_Rate']
+
+        
+
+        MonthlyDateWiseMeal =  meal_serializer.data
+        monthly_total_meal_single_user=0
+        if len(MonthlyDateWiseMeal) != 0:
+            for eachDayMeal in MonthlyDateWiseMeal:
+                monthly_total_meal_single_user+=float(eachDayMeal['meal_sum_per_day'])
+
+        meal_cost_monthly= round((meal_rate_floot * monthly_total_meal_single_user),2)
+
+        response_data = {
+            'user_details': {
+                 **user_details,
+                'access_permissions': permissions,
+                },
+            'user_accounts':{
+                'going_for_bazar': going_for_bazar,
+                'total_meal_monthly' : monthly_total_meal_single_user,
+                'total_taka_submit': 'Coming Soon',
+                'extra_cost': cost_data,
+                # 'real_rate2' : meal_rate_floot,#meal_rate_response,
+                'real_rate' : meal_rate_response,
+                'meal_cost_monthly': meal_cost_monthly,
+                'remain_balance' : 'Coming Soon',
+                'due' : 'Coming Soon',
+                'payment_history' : 'coming soon',
+            },
+           
+            'date_wise_meal': MonthlyDateWiseMeal,
+        }
+
+        return response_data
+
+        # Instead of returning the Response, return the data
+    def serialize_datetime(self, datetime_obj):
+            if datetime_obj is not None:
+                return DjangoJSONEncoder().encode(datetime_obj).strip('"')
+            return None
+
 
 # Create your views here.
 class MonthlyMealView(APIView):
@@ -96,13 +225,24 @@ class MealRateView(APIView):
 
 class MealEntryView(APIView):
     renderer_classes = [UserRenderer]
-    def post(self,request,format=None):
+
+    def post(self, request, format=None):
         serializer = MealEntrySerializer(data=request.data)
 
         if serializer.is_valid(raise_exception=True):
-            mealEntry = serializer.save()
-            return Response({'msg':'Successfully added Meal'},status=status.HTTP_201_CREATED)
-        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+            self.perform_create(serializer)
+            return Response({'msg': 'Successfully added Meal'}, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def perform_create(self, serializer):
+        # Check if the user is active before saving the meal entry
+        user = serializer.validated_data['user']
+
+        if not user.is_active:
+            raise serializers.ValidationError({'user': 'User is not active for this month.'})
+
+        serializer.save()
     
 
 class MealEditView(APIView):
@@ -115,7 +255,7 @@ class MealEditView(APIView):
 
         # Validate the date format
         try:
-            meal_date = datetime.datetime.strptime(date, '%Y-%m-%d').date()
+            meal_date = dt_datetime.datetime.strptime(date, '%Y-%m-%d').date()
         except ValueError:
             return Response({'error': 'Invalid date format. Date must be in YYYY-MM-DD format.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -139,7 +279,7 @@ class MealEditView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
-class MonthlySingleUserDetailsView(APIView):
+class MonthlySingleUserDetailsView(APIView,UserDetailsMixin):
     renderer_classes = [UserRenderer]
     def get(self, request):
         user_id = request.query_params.get('user')
@@ -158,8 +298,8 @@ class MonthlySingleUserDetailsView(APIView):
 
         
         # Check if year is within a valid range
-        current_year = datetime.datetime.now().year
-        current_month = datetime.datetime.now().month
+        current_year = dt_datetime.datetime.now().year
+        current_month = dt_datetime.datetime.now().month
         if year < 1900 or year > current_year:
             return Response({'error': 'Year is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -175,69 +315,8 @@ class MonthlySingleUserDetailsView(APIView):
             return Response({'error': 'User not found.'}, status=404)
         
         
-        bazar_List_response=CallBazarListAPI(year=year, month=month)
-        #return Response(Total_meal_monthly['success'], status=status.HTTP_200_OK)
-
-        #user wise bazar count
-        going_for_bazar=0
-        if bazar_List_response['success']:
-            allBazarObject=bazar_List_response['data']
-            datewise_bazar=allBazarObject['data']
-            for eachBazar in datewise_bazar:
-                user_id_in_bazar= eachBazar['user']
-                if user_id_in_bazar == int(user_id):
-                    going_for_bazar += 1
-                
-
-        # Filter MealHistory entries for the specific user, year, and month
-        meal_entries = MealHistory.objects.filter(
-            user_id=user_id,
-            date__year=year,
-            date__month=month
-        )
-        # Include user details in the response
-        user_details = {
-            'user_id': user.id,
-            'fullName': user.fullName,
-            'email': user.email,
-            'phone_no': user.phone_no,
-        }
-
-        meal_serializer = MonthlySingleUserDetailsSerializers(meal_entries, many=True)
-
-        meal_rate_response = CallMealRateAPI(year=year, month=month)
-        
-        meal_rate_floot=0
-        if meal_rate_response['success']: 
-            meal_rate_floot = meal_rate_response['data']['Meal_Rate']
-
-        
-
-        MonthlyDateWiseMeal =  meal_serializer.data
-        monthly_total_meal_single_user=0
-        if len(MonthlyDateWiseMeal) != 0:
-            for eachDayMeal in MonthlyDateWiseMeal:
-                monthly_total_meal_single_user+=float(eachDayMeal['meal_sum_per_day'])
-
-        meal_cost_monthly= round((meal_rate_floot * monthly_total_meal_single_user),2)
-
-        response_data = {
-            'user_details': user_details,
-            'user_accounts':{
-                'going_for_bazar': going_for_bazar,
-                'total_meal_monthly' : monthly_total_meal_single_user,
-                'total_taka_submit': 'Coming Soon',
-                'extra_cost': 'Coming Soon',
-                # 'real_rate2' : meal_rate_floot,#meal_rate_response,
-                'real_rate' : meal_rate_response,
-                'meal_cost_monthly': meal_cost_monthly,
-                'remain_balance' : 'Coming Soon',
-                'due' : 'Coming Soon',
-            },
-            'access_permissions':"Coming Soon",
-            'date_wise_meal': MonthlyDateWiseMeal,
-        }
-
+        response_data = self.get_user_data(user, request)
+        # response_data={'user': "xxxxx"}
         # Serialize the data
 
         return Response(response_data,status=status.HTTP_200_OK)
@@ -292,8 +371,8 @@ class AllBazarListView(APIView):
             return Response({'error': 'Year and month must be valid integers.'}, status=400)
         
         # Check if year is within a valid range
-        current_year = datetime.datetime.now().year
-        current_month = datetime.datetime.now().month
+        current_year = dt_datetime.datetime.now().year
+        current_month = dt_datetime.datetime.now().month
         if year < 1900 or year > current_year:
             return Response({'error': 'Year is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -310,7 +389,175 @@ class AllBazarListView(APIView):
 
         bazar_serializer = AllBazarListSerializer(bazar_entries, many=True)
         return Response({'Success':True,'data':bazar_serializer.data},status=status.HTTP_200_OK)
+
+class MonthlyAllUserDetailsView(APIView,UserDetailsMixin):
+    renderer_classes = [UserRenderer]
+    def get(self, request):
+       
+        year = request.query_params.get('year', None)
+        month = request.query_params.get('month', None)
+
+        
+        if  not year or not month:
+            return Response({'error': 'user, year, and month are required query parameters.'}, status=400)
+        try:
+            year = int(year)
+            month = int(month)
+        except ValueError:
+            return Response({'error': 'Year and month must be valid integers.'}, status=400)
+        
+
+        
+        # Check if year is within a valid range
+        current_year = dt_datetime.datetime.now().year
+        current_month = dt_datetime.datetime.now().month
+        if year < 1900 or year > current_year:
+            return Response({'error': 'Year is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if month is within a valid range (1 to 12)
+        if month < 1 or month > 12 or current_month < month:
+            return Response({'error': 'Month is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get the user instance from the CustomUser model
+        
+        allUserID= list(CustomUser.objects.values_list('id', flat=True).order_by('id'))
+
+        MonthlyAllUser=[]
+
+        for user_id in allUserID:
+            # singleUser = CallMonthlySingleUserDetailsAPI(user_id,year, month)
+            # MonthlyAllUser.append(singleUser)
+            # print(user_id, "Type: " , type(user_id))
+            try:
+                user = CustomUser.objects.get(id=user_id)
+
+            except CustomUser.DoesNotExist:
+                return Response({'error': 'User not found.'}, status=404)
+            
+            user_data = self.get_user_data(user, request)
+            MonthlyAllUser.append(user_data)
+        
+        return Response({'Success': True,
+                         'data': MonthlyAllUser}, status=status.HTTP_200_OK)
+    
+class ExtraExpensesView(APIView):
+    renderer_classes = [UserRenderer]
+    def post(self, request):
+        try:
+            # Get the phone number from the request data
+            get_date = request.data['date']
+            get_expense_name=request.data['expense_name']
+            get_expense_amount=request.data['expense_amount']
+
+            # date convertin date format
+            get_date = datetime.strptime(get_date, '%Y-%m-%d').date()
+
+            print(type(get_date))
+
+
+            today = date.today()
+            if get_date > today:
+                return Response({"error": "Date cannot be greater than today"}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return Response({'error':{'message': f'An unexpected error occurred: {e}'}},status=status.HTTP_400_BAD_REQUEST)
+        
+        # Create the extra_expense_amount instance
+        extra_expense_data = {
+
+            'date': get_date,
+            'expense_name': get_expense_name,
+            'expense_amount': get_expense_amount,
+        }
+        serializer = ExtraExpensesSerializer(data=extra_expense_data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        # Return a success response
+        return Response({'status': 'Extra Expenses Entry successful'},status=status.HTTP_201_CREATED)
     
 
-class MonthlyAllUserDetailsView(APIView):
-    pass
+class AllExtraExpenseView(APIView):
+    renderer_classes = [UserRenderer]
+    def get(self, request):
+        year = request.query_params.get('year')
+        month = request.query_params.get('month')
+
+        if not year or not month:
+            return Response({'error': 'year, and month are required query parameters.'}, status=400)
+
+        try:
+            year = int(year)
+            month = int(month)
+        except ValueError:
+            return Response({'error': 'Year and month must be valid integers.'}, status=400)
+        
+        # Check if year is within a valid range
+        current_year = dt_datetime.datetime.now().year
+        current_month = dt_datetime.datetime.now().month
+        if year < 1900 or year > current_year:
+            return Response({'error': 'Year is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if month is within a valid range (1 to 12)
+        if month < 1 or month > 12 or current_month < month:
+            return Response({'error': 'Month is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+        # Filter Extra Expenses entries for the specific, year, and month
+        extra_expense_entries = ExtraExpensesHistory.objects.filter(
+            date__year=year,
+            date__month=month
+        )
+
+        extra_expenses_serializer = AllExtraExpenseSerializer(extra_expense_entries, many=True)
+
+        return Response({'Success':True,'data':extra_expenses_serializer.data},status=status.HTTP_200_OK)
+    
+    
+    def put(self, request):
+        expense_id = request.query_params.get('expense_id', None)
+
+        if expense_id is None :
+            return Response({'error': 'Expense ID are required in the request body.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not expense_id.isdigit():
+            return Response({'error':  f" 'id' expected a number but got {expense_id}"}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+        try:
+            expense_entry = ExtraExpensesHistory.objects.get(id=expense_id)
+        except ExtraExpensesHistory.DoesNotExist:
+            return Response({'error': 'Expense entry not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = AllExtraExpenseSerializer(expense_entry, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'msg': 'Successfully Edited Expense.','data':serializer.data}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request):
+        # IsAdminUser applited
+        # self.permission_classes = [IsAdminUser]
+        self.renderer_classes = [UserRenderer]
+        self.check_permissions(request)
+
+        expense_id = request.query_params.get('expense_id', None)
+
+        if expense_id is None :
+            return Response({'error': 'Expense ID are required in the request body.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not expense_id.isdigit():
+            return Response({'error':  f" 'id' expected a number but got {expense_id}"}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+        try:
+            expense_entry = ExtraExpensesHistory.objects.get(id=expense_id)
+        except ExtraExpensesHistory.DoesNotExist:
+            return Response({'error': 'Expense entry not found.'}, status=status.HTTP_404_NOT_FOUND)
+            
+
+        expense_entry.delete()
+        return Response({'msg': f'{expense_entry.expense_name} -Deleted from your system'},status=status.HTTP_204_NO_CONTENT)
+    
+

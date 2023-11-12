@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from account.serializer import UserRegistrationSerializer ,UserLoginSerializer,UserProfileSerializer,UserChangePasswordSerializer,SendPasswordResetEmailSerializer,UserPasswordRestSerializer,UserProfileEditSerializer
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate,login
 from account.renderers import UserRenderer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated,IsAdminUser
@@ -45,6 +45,7 @@ class UserLoginView(APIView):
             user = authenticate(phone_no=phone_no,password=password)
 
             if user is not None:
+                login(request, user)
                 token=get_tokens_for_user(user)
                 return Response({'token':token, 'msg': 'Login successful'},status=status.HTTP_200_OK)
             else:
@@ -129,6 +130,11 @@ class UserEditView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+    
+
+
                 
 
 
