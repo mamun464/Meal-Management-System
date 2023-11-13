@@ -389,6 +389,59 @@ class AllBazarListView(APIView):
 
         bazar_serializer = AllBazarListSerializer(bazar_entries, many=True)
         return Response({'Success':True,'data':bazar_serializer.data},status=status.HTTP_200_OK)
+    
+    def put(self, request):
+
+        bazar_id = request.query_params.get('bazar_id', None)
+        user_id = request.query_params.get('user', None)
+
+        if bazar_id is None or user_id is None:
+            return Response({'error': 'Bazar ID and User ID are required in the request Params.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not bazar_id.isdigit() or not user_id.isdigit():
+            return Response({'error':  " 'id' expected a number but got other"}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+        try:
+            bazar_entry = BazarHistory.objects.get(id=bazar_id)
+            user = CustomUser.objects.get(id=user_id, is_active=True)
+        except BazarHistory.DoesNotExist:
+            return Response({'error': 'Bazar entry not found.'}, status=status.HTTP_404_NOT_FOUND)
+        except CustomUser.DoesNotExist:
+            return Response({'error': 'User not found. May be not active user'}, status=status.HTTP_404_NOT_FOUND)
+
+
+        serializer = AllBazarListSerializer(bazar_entry, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'msg': 'Successfully Edited Bazar.','data':serializer.data}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request):
+        # IsAdminUser applited
+        # self.permission_classes = [IsAdminUser]
+        self.renderer_classes = [UserRenderer]
+        self.check_permissions(request)
+
+        bazar_id = request.query_params.get('bazar_id', None)
+
+        if bazar_id is None :
+            return Response({'error': 'Expense ID are required in the request Params.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not bazar_id.isdigit():
+            return Response({'error':  f" 'id' expected a number but got {bazar_id}"}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+        try:
+            bazar_entry = BazarHistory.objects.get(id=bazar_id)
+        except BazarHistory.DoesNotExist:
+            return Response({'error': 'Bazar Expense entry not found.'}, status=status.HTTP_404_NOT_FOUND)
+            
+
+        bazar_entry.delete()
+        return Response({'msg': f'{bazar_id} No. Bazar -Deleted from your system'},status=status.HTTP_204_NO_CONTENT)
+    
 
 class MonthlyAllUserDetailsView(APIView,UserDetailsMixin):
     renderer_classes = [UserRenderer]
