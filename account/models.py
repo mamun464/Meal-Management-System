@@ -47,7 +47,7 @@ class CustomUser(AbstractBaseUser,PermissionsMixin):
     user_profile_img = models.ImageField(upload_to="profile",null=True,blank=True)
     phone_no=models.CharField(db_index=True,max_length=20, null=False,unique=True)
 
-    is_staff = models.BooleanField(default=True) # must needed, otherwise you won't be able to loginto django-admin.
+    is_staff = models.BooleanField(default=False) # must needed, otherwise you won't be able to loginto django-admin.
     is_active = models.BooleanField(default=True) # must needed, otherwise you won't be able to loginto django-admin.
     is_superuser = models.BooleanField(default=False) # this field we inherit from PermissionsMixin.
 

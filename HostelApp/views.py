@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import MealHistory,CustomUser,BazarHistory,ExtraExpensesHistory,UserPaymentHistory
 from django.db.models import Sum
-from HostelApp.Calculationhelper import CallMonthlyTotalMealAPI,CallMealRateAPI,CallBazarListAPI,CallMonthlySingleUserDetailsAPI,CallExtraCostAPI
+from HostelApp.Calculationhelper import CallMonthlyTotalMealAPI,CallMealRateAPI,CallBazarListAPI,CallMonthlySingleUserDetailsAPI,CallExtraCostAPI,CallPaymentListAPI
 import math
 import datetime as dt_datetime
 # from datetime import datetime as dt_datetime, date as dt_date
@@ -32,6 +32,24 @@ class UserDetailsMixin:
         bazar_List_response=CallBazarListAPI(year=year, month=month)
 
         extra_expense_List_response=CallExtraCostAPI(year=year, month=month)
+
+        # print("Upper payment_List_response")
+
+        payment_List_response=CallPaymentListAPI(year=year, month=month)
+
+        #Submitted Amount Calculations
+        total_pay_amount= 0
+        total_pay_history= []
+        if payment_List_response['data']['Success']:
+            list_of_all_payment = payment_List_response['data']['data']
+            for eachPayment in list_of_all_payment:
+                if eachPayment['user'] == user.id:
+                    total_pay_history.append(eachPayment)
+                    total_pay_amount+= float(eachPayment['submitted_amount'])
+        else:
+            return("No data found")
+
+        
         #return Response(Total_meal_monthly['success'], status=status.HTTP_200_OK)
 
         #user wise bazar count
@@ -63,7 +81,7 @@ class UserDetailsMixin:
         cost_data={
             "total_extra_cost":totall_monthly_extra_expense,
              "Active_User" : person_in_month,
-             "extra_cost_per_head" : totall_monthly_extra_expense/person_in_month,
+             "extra_cost_per_head" : round((totall_monthly_extra_expense/person_in_month),2),
 
             "datewise_expese":datewise_expese,
            
@@ -110,6 +128,15 @@ class UserDetailsMixin:
 
         meal_cost_monthly= round((meal_rate_floot * monthly_total_meal_single_user),2)
 
+        # remaining Balance calculations
+        remaining_balance = round(total_pay_amount - (meal_cost_monthly+cost_data['extra_cost_per_head']),2)
+        if remaining_balance < 0:
+            show_remaining_balance = 0
+            due_balance = remaining_balance*(-1)
+        else:
+            show_remaining_balance=remaining_balance
+            due_balance = 0
+
         response_data = {
             'user_details': {
                  **user_details,
@@ -118,14 +145,14 @@ class UserDetailsMixin:
             'user_accounts':{
                 'going_for_bazar': going_for_bazar,
                 'total_meal_monthly' : monthly_total_meal_single_user,
-                'total_taka_submit': 'Coming Soon',
+                'total_taka_submit': total_pay_amount,
                 'extra_cost': cost_data,
                 # 'real_rate2' : meal_rate_floot,#meal_rate_response,
                 'real_rate' : meal_rate_response,
                 'meal_cost_monthly': meal_cost_monthly,
-                'remain_balance' : 'Coming Soon',
-                'due' : 'Coming Soon',
-                'payment_history' : 'coming soon',
+                'remain_balance' : show_remaining_balance,
+                'due' : due_balance,
+                'payment_history' : total_pay_history,
             },
            
             'date_wise_meal': MonthlyDateWiseMeal,
@@ -315,11 +342,11 @@ class MonthlySingleUserDetailsView(APIView,UserDetailsMixin):
             return Response({'error': 'User not found.'}, status=404)
         
         
-        response_data = self.get_user_data(user, request)
-        # response_data={'user': "xxxxx"}
-        # Serialize the data
 
-        return Response(response_data,status=status.HTTP_200_OK)
+        response_data = self.get_user_data(user, request)
+        # response_data={'user': response_data}
+        # Serialize the data
+        return Response(response_data, status=status.HTTP_200_OK)
     
 
 

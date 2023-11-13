@@ -179,4 +179,38 @@ def CallExtraCostAPI(year, month):
     except Exception as e:
         # Handle other unexpected errors
         return {'success': False, 'error': f"An unexpected error occurred-3 (monthly-extra-expense-list): {str(e)}"}
+    
 
+
+def CallPaymentListAPI(year, month):
+    try:
+        # Define the URL of your API endpoint
+         # Your base URL
+        api_url = f"{base_url}/api/hostel/monthly-payment-data/"
+
+        # Define the JSON data to send in the request body
+        params = {
+            "year": year,
+            "month": month,
+        }
+
+        # Make a POST request to the API
+        response = requests.get(api_url, params=params)
+        if response.status_code == 200:
+           
+            # Successful API call
+            api_data = response.json()
+            return {'data': api_data}
+        else:
+            # Handle API call errors
+            api_data = response.json()
+            return {'success': False, 
+                    'error': f"API call error-1 (CallPaymentListAPI): {response.status_code}",
+                    'msg': api_data
+                    }
+    except requests.exceptions.RequestException as e:
+        # Handle request-related errors (e.g., network issues)
+        return {'success': False, 'error': f"Request error-2 (CallPaymentListAPI): {str(e)}"}
+    except Exception as e:
+        # Handle other unexpected errors
+        return {'success': False, 'error': f"An unexpected error occurred-3 (CallPaymentListAPI): {str(e)}"}
