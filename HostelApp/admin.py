@@ -12,7 +12,7 @@ class BazarHistoryAdmin(admin.ModelAdmin):
 
 
 class UserPaymentHistoryAdmin(admin.ModelAdmin):
-    list_display = ('user', 'date', 'submitted_amount')
+    list_display = ('id','user', 'date', 'submitted_amount')
     search_fields = ('user__email', 'user__phone_no', 'date')
     list_filter = ('user__email', 'user__phone_no', 'date')
 

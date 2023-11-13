@@ -52,4 +52,9 @@ class AllExtraExpenseSerializer(serializers.ModelSerializer):
             model = ExtraExpensesHistory
             fields = [ 'id','date', 'expense_name', 'expense_amount']
 
+class PaymentEntrySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserPaymentHistory
+        fields = ['id','user', 'date', 'submitted_amount']
+
 

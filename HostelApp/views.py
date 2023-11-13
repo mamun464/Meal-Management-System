@@ -1,12 +1,12 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
 from account.renderers import UserRenderer
-from HostelApp.serializer import MonthlyMealSerializer,MealEntrySerializer,MealEditSerializer,MonthlySingleUserDetailsSerializers,BazarEntrySerializer,AllBazarListSerializer,ExtraExpensesSerializer,AllExtraExpenseSerializer
+from HostelApp.serializer import MonthlyMealSerializer,MealEntrySerializer,MealEditSerializer,MonthlySingleUserDetailsSerializers,BazarEntrySerializer,AllBazarListSerializer,ExtraExpensesSerializer,AllExtraExpenseSerializer,PaymentEntrySerializer
 from account.serializer import UserProfileSerializer
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework import status
-from .models import MealHistory,CustomUser,BazarHistory,ExtraExpensesHistory
+from .models import MealHistory,CustomUser,BazarHistory,ExtraExpensesHistory,UserPaymentHistory
 from django.db.models import Sum
 from HostelApp.Calculationhelper import CallMonthlyTotalMealAPI,CallMealRateAPI,CallBazarListAPI,CallMonthlySingleUserDetailsAPI,CallExtraCostAPI
 import math
@@ -505,9 +505,6 @@ class ExtraExpensesView(APIView):
             # date convertin date format
             get_date = datetime.strptime(get_date, '%Y-%m-%d').date()
 
-            print(type(get_date))
-
-
             today = date.today()
             if get_date > today:
                 return Response({"error": "Date cannot be greater than today"}, status=status.HTTP_400_BAD_REQUEST)
@@ -612,5 +609,167 @@ class AllExtraExpenseView(APIView):
 
         expense_entry.delete()
         return Response({'msg': f'{expense_entry.expense_name} -Deleted from your system'},status=status.HTTP_204_NO_CONTENT)
+    
+
+class PaymentEntryView(APIView):
+    renderer_classes = [UserRenderer]
+    def post(self, request):
+        try:
+            # Get the phone number from the request data
+            phone_no = request.data['phone_no']
+            submitted_amount=request.data['amount']
+            get_date = request.data['date']
+
+            # date convertin date format
+            get_date = datetime.strptime(get_date, '%Y-%m-%d').date()
+
+            today = date.today()
+            if get_date > today:
+                return Response({"error": "Date cannot be greater than today"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Get the user ID using the phone number
+            user = CustomUser.objects.get(phone_no=phone_no)
+            user_id = user.id
+        except CustomUser.DoesNotExist:
+            return Response({'error':{'message': f'User with phone number {phone_no} not found'}})
+        except Exception as e:
+            return Response({'error':{'message': f'An unexpected error occurred: {e}'}})
+       
+       
+        # Create the payment instance
+        payment_history_data = {
+            'user': user_id,
+            'date': get_date,
+            'submitted_amount': submitted_amount,
+            
+        }
+        serializer = PaymentEntrySerializer(data=payment_history_data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        # Return a success response
+        return Response({ 'success' : True,
+                         'msg': 'Payment successful',
+                         'data': serializer.data,
+                         })
+    
+
+    
+    def get(self, request):
+        year = request.query_params.get('year')
+        month = request.query_params.get('month')
+
+        if not year or not month:
+            return Response({'error': 'year, and month are required query parameters.'}, status=400)
+
+        try:
+            year = int(year)
+            month = int(month)
+        except ValueError:
+            return Response({'error': 'Year and month must be valid integers.'}, status=400)
+        
+        # Check if year is within a valid range
+        current_year = dt_datetime.datetime.now().year
+        current_month = dt_datetime.datetime.now().month
+        if year < 1900 or year > current_year:
+            return Response({'error': 'Year is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if month is within a valid range (1 to 12)
+        if month < 1 or month > 12 or current_month < month:
+            return Response({'error': 'Month is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+        # Filter Extra Expenses entries for the specific, year, and month
+        extra_expense_entries = UserPaymentHistory.objects.filter(
+            date__year=year,
+            date__month=month
+        )
+
+        extra_expenses_serializer = PaymentEntrySerializer(extra_expense_entries, many=True)
+
+        return Response({'Success':True,'data':extra_expenses_serializer.data},status=status.HTTP_200_OK)
+    
+    def put(self, request):
+        pay_id = request.query_params.get('pay_id', None)
+        phone_no = request.data.get('phone_no', None)
+        get_date_str = request.data.get('date', None)
+        
+
+        if pay_id is None :
+            return Response({'error': 'Payment ID are required in the request Params.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not pay_id.isdigit():
+            return Response({'error':  f" 'id' expected a number but got {pay_id}"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # date convertin date format
+        if get_date_str:
+            get_date = datetime.strptime(get_date_str, '%Y-%m-%d').date()
+
+            today = date.today()
+            if get_date > today:
+                return Response({"error": "Date cannot be greater than today"}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+        try:
+            payment_entry = UserPaymentHistory.objects.get(id=pay_id)
+            if phone_no:
+                
+                user = CustomUser.objects.get(phone_no=phone_no, is_active=True)
+                user_id = user.id
+                # request.data['user'] = user_id
+                 # Convert to mutable QueryDict
+                mutable_data = request.data.copy()
+
+                # Iterate through keys in request.data and update the mutable copy
+                for key in request.data:
+                    mutable_data[key] = request.data[key]
+
+                # Add or update specific fields
+                mutable_data['user'] = user_id
+
+                # Use the mutable_data in the serializer
+                serializer = PaymentEntrySerializer(payment_entry, data=mutable_data, partial=True)
+            else:
+                serializer = PaymentEntrySerializer(payment_entry, data=request.data, partial=True)
+
+        except UserPaymentHistory.DoesNotExist:
+            return Response({'error': 'Payment entry not found.'}, status=status.HTTP_404_NOT_FOUND)
+        
+        except CustomUser.DoesNotExist:
+            return Response({'error': 'User not found. May be not active user'}, status=status.HTTP_404_NOT_FOUND)
+
+        
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'success': True,
+                             'msg': 'Successfully Edited Payment.',
+                             'data':serializer.data}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+    def delete(self, request):
+        # IsAdminUser applited
+        # self.permission_classes = [IsAdminUser]
+        self.renderer_classes = [UserRenderer]
+        self.check_permissions(request)
+
+        pay_id = request.query_params.get('pay_id', None)
+
+        if pay_id is None :
+            return Response({'error': 'Payment ID are required in the request Params.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not pay_id.isdigit():
+            return Response({'error':  f" 'id' expected a number but got {pay_id}"}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+        try:
+            Payment_entry = UserPaymentHistory.objects.get(id=pay_id)
+        except UserPaymentHistory.DoesNotExist:
+            return Response({'error': 'Payment entry not found.'}, status=status.HTTP_404_NOT_FOUND)
+            
+
+        Payment_entry.delete()
+        return Response({'msg': f'{Payment_entry.submitted_amount} amount is Deleted on {Payment_entry.date} from your system'},status=status.HTTP_204_NO_CONTENT)
     
 
