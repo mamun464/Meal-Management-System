@@ -1,7 +1,7 @@
 from django.urls import path
 
 from account.views import UserLoginView
-from HostelApp.views import MonthlyMealView,MealRateView,MealEntryView,MealEditView,MonthlySingleUserDetailsView,BazarEntryView,AllBazarListView,MonthlyAllUserDetailsView,ExtraExpensesView,AllExtraExpenseView,PaymentEntryView
+from HostelApp.views import MonthlyMealView,MealRateView,MealEntryView,MealEditView,MonthlySingleUserDetailsView,BazarEntryView,AllBazarListView,MonthlyAllUserDetailsView,ExtraExpensesView,AllExtraExpenseView,PaymentEntryView,AvailabilityCheckView
 
 urlpatterns = [
 
@@ -30,6 +30,9 @@ urlpatterns = [
     path('monthly-payment-data/', PaymentEntryView.as_view(),name='monthly-payment-data'),
     path('edit-payment/', PaymentEntryView.as_view(),name='edit-payment'),
     path('delete-payment/', PaymentEntryView.as_view(),name='payment-delete'),
+    
+    #availability check API methods
+    path('availability-check/', AvailabilityCheckView.as_view(), name='availability_check_api'),
  
     
 ]

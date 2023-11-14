@@ -1,6 +1,7 @@
 
 from rest_framework import serializers
-from .models import MealHistory,BazarHistory,CustomUser,ExtraExpensesHistory,UserPaymentHistory
+from datetime import datetime
+from .models import MealHistory,BazarHistory,CustomUser,ExtraExpensesHistory,UserPaymentHistory,UserAvailabilityCheck
 
 class MonthlyMealSerializer(serializers.ModelSerializer):
     class Meta:
@@ -56,5 +57,7 @@ class PaymentEntrySerializer(serializers.ModelSerializer):
     class Meta:
         model = UserPaymentHistory
         fields = ['id','user', 'date', 'submitted_amount']
+        
+
 
 

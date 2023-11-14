@@ -6,7 +6,7 @@ from account.serializer import UserProfileSerializer
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework import status
-from .models import MealHistory,CustomUser,BazarHistory,ExtraExpensesHistory,UserPaymentHistory
+from .models import MealHistory,CustomUser,BazarHistory,ExtraExpensesHistory,UserPaymentHistory,UserAvailabilityCheck
 from django.db.models import Sum
 from HostelApp.Calculationhelper import CallMonthlyTotalMealAPI,CallMealRateAPI,CallBazarListAPI,CallMonthlySingleUserDetailsAPI,CallExtraCostAPI,CallPaymentListAPI
 import math
@@ -803,5 +803,34 @@ class PaymentEntryView(APIView):
 
         Payment_entry.delete()
         return Response({'msg': f'{Payment_entry.submitted_amount} amount is Deleted on {Payment_entry.date} from your system'},status=status.HTTP_204_NO_CONTENT)
+    
+    
+class AvailabilityCheckView(APIView):
+    def post(self, request, *args, **kwargs):
+        # Set default values for month, year, and is_available
+        current_date = datetime.now()
+        month = 8#current_date.month
+        year = 2023#current_date.year
+        is_available = True
+
+        # Get all active users
+        active_users = CustomUser.objects.filter(is_active=True, is_superuser=False)
+
+        # Save availability information for each user
+        for user in active_users:
+            existing_entry = UserAvailabilityCheck.objects.filter(user=user, month=month, year=year).first()
+
+            if not existing_entry:
+                # Create a new entry if none exists
+                availability_check = UserAvailabilityCheck(
+                    user=user,
+                    month=month,
+                    year=year,
+                    is_available=is_available
+                )
+                availability_check.save()
+
+        return Response({'message': 'Availability saved successfully'}, status=status.HTTP_200_OK)
+
     
 

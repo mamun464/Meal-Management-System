@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import MealHistory,BazarHistory,UserPaymentHistory, ExtraExpensesHistory
+from .models import MealHistory,BazarHistory,UserPaymentHistory, ExtraExpensesHistory,UserAvailabilityCheck
 # Register your models here.
 
 class MealHistoryAdmin(admin.ModelAdmin):
@@ -21,8 +21,15 @@ class ExtraExpensesHistoryAdmin(admin.ModelAdmin):
     search_fields = ('date', 'expense_name')
     list_filter = ('date', 'expense_name')
     
+class UserAvailabilityCheckAdmin(admin.ModelAdmin):
+    list_display = ('user', 'month', 'year', 'is_available')
+    list_filter = ('user', 'month', 'year', 'is_available')
+
+
+
 
 admin.site.register(MealHistory,MealHistoryAdmin)
 admin.site.register(BazarHistory,BazarHistoryAdmin)
 admin.site.register(UserPaymentHistory, UserPaymentHistoryAdmin)
 admin.site.register(ExtraExpensesHistory, ExtraExpensesHistoryAdmin)
+admin.site.register(UserAvailabilityCheck, UserAvailabilityCheckAdmin)

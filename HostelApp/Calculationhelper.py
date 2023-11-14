@@ -3,6 +3,7 @@ import pprint
 from django.http import HttpResponse
 from rest_framework.response import Response
 from rest_framework import status
+from .models import UserAvailabilityCheck
 
 base_url = "http://127.0.0.1:8000"
 
@@ -214,3 +215,4 @@ def CallPaymentListAPI(year, month):
     except Exception as e:
         # Handle other unexpected errors
         return {'success': False, 'error': f"An unexpected error occurred-3 (CallPaymentListAPI): {str(e)}"}
+    

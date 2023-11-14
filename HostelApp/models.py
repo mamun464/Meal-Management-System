@@ -1,5 +1,6 @@
-from django.db import models
+
 from django.db.models import F
+from django.contrib.auth import get_user_model
 
 # Create your models here.
 
@@ -58,6 +59,18 @@ class ExtraExpensesHistory(models.Model):
     date = models.DateField(null=False)
     expense_name = models.CharField(max_length=100, null=False)
     expense_amount = models.DecimalField(max_digits=10, decimal_places=2, null=False)
+    
+class UserAvailabilityCheck(models.Model):
+    user = models.ForeignKey(get_user_model(), on_delete=models.PROTECT, related_name='availability_check')
+    month = models.PositiveIntegerField()
+    year = models.PositiveIntegerField()
+    is_available = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ('user', 'month', 'year')
+
+    def __str__(self):
+        return f"{self.user.fullName} - {self.month} {self.year}"
 
 
 
