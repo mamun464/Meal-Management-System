@@ -39,10 +39,12 @@ class UserDetailsMixin:
 
         #Submitted Amount Calculations
         total_pay_amount= 0
+        meal_account_balance= 0
         total_pay_history= []
         if payment_List_response['data']['Success']:
             list_of_all_payment = payment_List_response['data']['data']
             for eachPayment in list_of_all_payment:
+                meal_account_balance+= float(eachPayment['submitted_amount'])
                 if eachPayment['user'] == user.id:
                     total_pay_history.append(eachPayment)
                     total_pay_amount+= float(eachPayment['submitted_amount'])
@@ -58,6 +60,7 @@ class UserDetailsMixin:
             allBazarObject=bazar_List_response['data']
             datewise_bazar=allBazarObject['data']
             for eachBazar in datewise_bazar:
+                # total_bazar_cost_monthly += eachBazar['data
                 user_id_in_bazar= eachBazar['user']
                 if user_id_in_bazar == user.id:
                     going_for_bazar += 1
@@ -75,7 +78,9 @@ class UserDetailsMixin:
         
         person_in_month= CustomUser.objects.filter(
             is_active = True
-        ).count()
+            ).exclude(
+                is_superuser=True
+                ).count()
         
 
         cost_data={
@@ -172,8 +177,8 @@ class MonthlyMealView(APIView):
     
     renderer_classes = [UserRenderer]
     def post(self, request):
-        year = request.data.get('year', None)
-        month = request.data.get('month', None)
+        year = request.query_params.get('year', None)
+        month = request.query_params.get('month', None)
 
         if year is None or month is None or not year.isdigit() or not month.isdigit():
             return Response({'error': 'Valid year and month are required in the request body.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -420,22 +425,22 @@ class AllBazarListView(APIView):
     def put(self, request):
 
         bazar_id = request.query_params.get('bazar_id', None)
-        user_id = request.query_params.get('user', None)
+        # user_id = request.query_params.get('user', None)
 
-        if bazar_id is None or user_id is None:
+        if bazar_id is None : #or user_id is None
             return Response({'error': 'Bazar ID and User ID are required in the request Params.'}, status=status.HTTP_400_BAD_REQUEST)
         
-        if not bazar_id.isdigit() or not user_id.isdigit():
+        if not bazar_id.isdigit() : #or not user_id.isdigit()
             return Response({'error':  " 'id' expected a number but got other"}, status=status.HTTP_400_BAD_REQUEST)
         
 
         try:
             bazar_entry = BazarHistory.objects.get(id=bazar_id)
-            user = CustomUser.objects.get(id=user_id, is_active=True)
+            # user = CustomUser.objects.get(id=user_id, is_active=True)
         except BazarHistory.DoesNotExist:
             return Response({'error': 'Bazar entry not found.'}, status=status.HTTP_404_NOT_FOUND)
-        except CustomUser.DoesNotExist:
-            return Response({'error': 'User not found. May be not active user'}, status=status.HTTP_404_NOT_FOUND)
+        # except CustomUser.DoesNotExist:
+        #     return Response({'error': 'User not found. May be not active user'}, status=status.HTTP_404_NOT_FOUND)
 
 
         serializer = AllBazarListSerializer(bazar_entry, data=request.data, partial=True)

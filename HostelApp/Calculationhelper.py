@@ -13,13 +13,13 @@ def CallMonthlyTotalMealAPI(year, month):
         api_url = f"{base_url}/api/hostel/all-meal-monthly/"
 
         # Define the JSON data to send in the request body
-        json_data = {
+        params = {
             "year": year,
             "month": month,
         }
 
         # Make a POST request to the API
-        response = requests.post(api_url, json=json_data)
+        response = requests.post(api_url, params=params)
 
         if response.status_code == 200:
             # Successful API call

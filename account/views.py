@@ -9,6 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated,IsAdminUser
 from account.models import CustomUser
 from rest_framework.renderers import JSONRenderer
+from django.utils import timezone
 
 
 
@@ -45,6 +46,8 @@ class UserLoginView(APIView):
             user = authenticate(phone_no=phone_no,password=password)
 
             if user is not None:
+                user.last_login = timezone.now()
+                user.save()
                 login(request, user)
                 token=get_tokens_for_user(user)
                 return Response({'token':token, 'msg': 'Login successful'},status=status.HTTP_200_OK)
