@@ -12,7 +12,7 @@ from rest_framework.renderers import JSONRenderer
 from django.utils import timezone
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.db.models import ProtectedError
-
+from django.contrib.auth import logout
 
 def get_tokens_for_user(user):
     refresh = RefreshToken.for_user(user)
@@ -62,7 +62,31 @@ class UserLoginView(APIView):
             else:
                 return Response({'errors':{'non_field_errors':['Login Failed! Invalid Phone Number or Password']}},status=status.HTTP_404_NOT_FOUND)
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
-    
+class TokenBlacklist:
+    blacklisted_tokens = set()
+class LogoutAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            refresh_token = request.data.get('refresh_token')
+
+            if not refresh_token:
+                return Response({'error': 'Refresh token is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if the refresh token is in the blacklist
+            if refresh_token in TokenBlacklist.blacklisted_tokens:
+                return Response({'error': 'Token is already invalidated.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Invalidate both the access and refresh tokens
+            access_token = request.auth
+            TokenBlacklist.blacklisted_tokens.add(refresh_token)
+            TokenBlacklist.blacklisted_tokens.add(str(access_token))
+
+            return Response({'msg': 'Logout successful'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': f'An error occurred during logout: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
 class UserProfileView(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
