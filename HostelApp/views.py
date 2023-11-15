@@ -652,7 +652,9 @@ class AllExtraExpenseView(APIView):
         # IsAdminUser applited
         # self.permission_classes = [IsAdminUser]
         self.renderer_classes = [UserRenderer]
+        self.permission_classes = [IsAdminUser]
         self.check_permissions(request)
+        
 
         expense_id = request.query_params.get('expense_id', None)
 
@@ -675,7 +677,11 @@ class AllExtraExpenseView(APIView):
 
 class PaymentEntryView(APIView):
     renderer_classes = [UserRenderer]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = []
     def post(self, request):
+        self.permission_classes = [IsAdminUser]
+        self.check_permissions(request)
         try:
             # Get the phone number from the request data
             phone_no = request.data['phone_no']
@@ -752,6 +758,8 @@ class PaymentEntryView(APIView):
         return Response({'Success':True,'data':extra_expenses_serializer.data},status=status.HTTP_200_OK)
     
     def put(self, request):
+        self.permission_classes = [IsAdminUser]
+        self.check_permissions(request)
         pay_id = request.query_params.get('pay_id', None)
         phone_no = request.data.get('phone_no', None)
         get_date_str = request.data.get('date', None)
@@ -812,7 +820,7 @@ class PaymentEntryView(APIView):
 
     def delete(self, request):
         # IsAdminUser applited
-        # self.permission_classes = [IsAdminUser]
+        self.permission_classes = [IsAdminUser]
         self.renderer_classes = [UserRenderer]
         self.check_permissions(request)
 
