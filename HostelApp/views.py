@@ -9,7 +9,7 @@ from rest_framework import status
 from .models import MealHistory,CustomUser,BazarHistory,ExtraExpensesHistory,UserPaymentHistory,UserAvailabilityCheck
 from django.db.models import Sum
 from HostelApp.Calculationhelper import CallMonthlyTotalMealAPI,CallMealRateAPI,CallBazarListAPI,CallMonthlySingleUserDetailsAPI,CallExtraCostAPI,CallPaymentListAPI
-import math
+from django.db.models import Q
 import datetime as dt_datetime
 # from datetime import datetime as dt_datetime, date as dt_date
 from datetime import datetime, date
@@ -21,7 +21,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 
 
 
-
+# All calculation doing here for  a single user
 class UserDetailsMixin:
     def get_user_data(self, user, request):
         # Your existing logic for MonthlySingleUserDetailsView
@@ -67,7 +67,7 @@ class UserDetailsMixin:
 
 
 
-       
+    #    extra Expenses calculations
         totall_monthly_extra_expense=0
         if extra_expense_List_response['success']:
             allExpenseObject=extra_expense_List_response['data']
@@ -76,17 +76,23 @@ class UserDetailsMixin:
                     totall_monthly_extra_expense += float(eachExpese['expense_amount'])
 
         
-        person_in_month= CustomUser.objects.filter(
-            is_active = True
-            ).exclude(
-                is_superuser=True
-                ).count()
-        
+
+        # Counting all non-superuser users based on conditions
+        person_in_month = CustomUser.objects.filter(
+
+            (Q(is_active=True) | Q(availability_check__is_available=True)) & ~Q(is_superuser=True),
+            availability_check__month=month,
+            availability_check__year=year,
+
+        ).distinct().count()
+
+        # Avoid division by zero
+        per_head_extra_cost =round((totall_monthly_extra_expense / person_in_month), 2) if person_in_month != 0 else 0
 
         cost_data={
             "total_extra_cost":totall_monthly_extra_expense,
              "Active_User" : person_in_month,
-             "extra_cost_per_head" : round((totall_monthly_extra_expense/person_in_month),2),
+             "extra_cost_per_head" : per_head_extra_cost,
 
             "datewise_expese":datewise_expese,
            
@@ -333,11 +339,11 @@ class MonthlySingleUserDetailsView(APIView,UserDetailsMixin):
         current_year = dt_datetime.datetime.now().year
         current_month = dt_datetime.datetime.now().month
         if year < 1900 or year > current_year:
-            return Response({'error': 'Year is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'Year Must be valid Or not greater than current year.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Check if month is within a valid range (1 to 12)
-        if month < 1 or month > 12 or current_month < month:
-            return Response({'error': 'Month is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
+        if month < 1 or month > 12 or (current_year == year and current_month < month):
+            return Response({'error': 'Month Must have Valid Month or must request less that current month'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Get the user instance from the CustomUser model
         try:
@@ -406,11 +412,11 @@ class AllBazarListView(APIView):
         current_year = dt_datetime.datetime.now().year
         current_month = dt_datetime.datetime.now().month
         if year < 1900 or year > current_year:
-            return Response({'error': 'Year is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Year Must be valid Or not greater than current year.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Check if month is within a valid range (1 to 12)
-        if month < 1 or month > 12 or current_month < month:
-            return Response({'error': 'Month is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
+        if month < 1 or month > 12 or (current_year == year and current_month < month):
+            return Response({'error': 'Month Must have Valid Month or must request less that current month'}, status=status.HTTP_400_BAD_REQUEST)
 
 
         # Filter MealHistory entries for the specific user, year, and month
@@ -497,11 +503,12 @@ class MonthlyAllUserDetailsView(APIView,UserDetailsMixin):
         current_year = dt_datetime.datetime.now().year
         current_month = dt_datetime.datetime.now().month
         if year < 1900 or year > current_year:
-            return Response({'error': 'Year is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error':'Year Must be valid Or not greater than current year.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Check if month is within a valid range (1 to 12)
-        if month < 1 or month > 12 or current_month < month:
-            return Response({'error': 'Month is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
+        if month < 1 or month > 12 or (current_year == year and current_month < month):
+            
+            return Response({'error': 'Month Must have Valid Month or must request less that current month'}, status=status.HTTP_400_BAD_REQUEST)
         
         # Get the user instance from the CustomUser model
         
@@ -578,11 +585,11 @@ class AllExtraExpenseView(APIView):
         current_year = dt_datetime.datetime.now().year
         current_month = dt_datetime.datetime.now().month
         if year < 1900 or year > current_year:
-            return Response({'error': 'Year is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Year Must be valid Or not greater than current year.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Check if month is within a valid range (1 to 12)
-        if month < 1 or month > 12 or current_month < month:
-            return Response({'error': 'Month is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
+        if month < 1 or month > 12 or (current_year == year and current_month < month):
+            return Response({'error': 'Month Must have Valid Month or must request less that current month (Testing)'}, status=status.HTTP_400_BAD_REQUEST)
 
 
         # Filter Extra Expenses entries for the specific, year, and month
@@ -704,11 +711,11 @@ class PaymentEntryView(APIView):
         current_year = dt_datetime.datetime.now().year
         current_month = dt_datetime.datetime.now().month
         if year < 1900 or year > current_year:
-            return Response({'error': 'Year is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'Year Must be valid Or not greater than current year.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Check if month is within a valid range (1 to 12)
-        if month < 1 or month > 12 or current_month < month:
-            return Response({'error': 'Month is out of range.'}, status=status.HTTP_400_BAD_REQUEST)
+        if month < 1 or month > 12 or (current_year == year and current_month < month): 
+            return Response({'error': 'Month Must have Valid Month or must request less that current month'}, status=status.HTTP_400_BAD_REQUEST)
 
 
         # Filter Extra Expenses entries for the specific, year, and month
