@@ -33,7 +33,7 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault('is_staff',True)
         extra_fields.setdefault('is_active',True)
         extra_fields.setdefault('is_superuser',True)
-        return self._create_user(email, password, fullName, phone_no, **extra_fields)
+        return self.create_user(email, password, fullName, phone_no, **extra_fields)
     
 
 

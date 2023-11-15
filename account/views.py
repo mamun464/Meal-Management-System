@@ -10,7 +10,8 @@ from rest_framework.permissions import IsAuthenticated,IsAdminUser
 from account.models import CustomUser
 from rest_framework.renderers import JSONRenderer
 from django.utils import timezone
-
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from django.db.models import ProtectedError
 
 
 def get_tokens_for_user(user):
@@ -24,7 +25,14 @@ def get_tokens_for_user(user):
 
 class UserRegistrationView(APIView):
     renderer_classes = [UserRenderer]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = []
     def post(self,request,format=None):
+        # IsAuthenticated applied
+        self.permission_classes = [IsAdminUser]
+
+        self.check_permissions(request)
+
         serializer = UserRegistrationSerializer(data=request.data)
 
         if serializer.is_valid(raise_exception=True):
@@ -90,23 +98,28 @@ class UserPasswordResetView(APIView):
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
     
 #for deleted user
+
 class UserDeleteView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminUser]
+    renderer_classes = [UserRenderer]
+
     def delete(self, request, phone):
-        # IsAdminUser applited
-        self.permission_classes = [IsAdminUser]
-        self.renderer_classes = [UserRenderer]
-        self.check_permissions(request)
+        try:
+            user = CustomUser.objects.get(phone_no=phone)
+        except CustomUser.DoesNotExist:
+            return Response({'errors': f"{phone} isn't Found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check if the user is a staff or superuser
+        if user.is_superuser:
+            return Response({'msg': 'Deletion of same or upper post accounts is not allowed.'}, status=status.HTTP_403_FORBIDDEN)
 
         try:
-             user=CustomUser.objects.get(phone_no=phone)
-        except CustomUser.DoesNotExist:
-            # raise Http404("User not found: The requested user does not exist")
-            return Response({'errors': f"{phone} isn't Found"}, status=status.HTTP_404_NOT_FOUND)
-            
+            user.delete()
+        except ProtectedError as e:
+            return Response({'msg': f'User {user.fullName} cannot be deleted because they have data in other DB.'}, status=status.HTTP_403_FORBIDDEN)
 
-        user.delete()
-        return Response({'msg': f'{user.fullName} Deleted from your system'},status=status.HTTP_204_NO_CONTENT)
-    
+        return Response({'msg': f'{user.fullName} deleted from your system'}, status=status.HTTP_204_NO_CONTENT)
 
 class UserEditView(APIView):
 
