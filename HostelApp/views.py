@@ -371,6 +371,8 @@ class MonthlySingleUserDetailsView(APIView,UserDetailsMixin):
 
 class BazarEntryView(APIView):
     renderer_classes = [UserRenderer]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminUser]
     def post(self, request):
         try:
             # Get the phone number from the request data
@@ -403,6 +405,8 @@ class BazarEntryView(APIView):
     
 class AllBazarListView(APIView):
     renderer_classes = [UserRenderer]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = []
     def get(self, request):
         year = request.query_params.get('year')
         month = request.query_params.get('month')
@@ -437,6 +441,8 @@ class AllBazarListView(APIView):
         return Response({'Success':True,'data':bazar_serializer.data},status=status.HTTP_200_OK)
     
     def put(self, request):
+        self.permission_classes = [IsAdminUser]
+        self.check_permissions(request)
 
         bazar_id = request.query_params.get('bazar_id', None)
         # user_id = request.query_params.get('user', None)
@@ -468,6 +474,7 @@ class AllBazarListView(APIView):
         # IsAdminUser applited
         # self.permission_classes = [IsAdminUser]
         self.renderer_classes = [UserRenderer]
+        self.permission_classes = [IsAdminUser]
         self.check_permissions(request)
 
         bazar_id = request.query_params.get('bazar_id', None)
