@@ -13,6 +13,8 @@ from django.db.models import Q
 import datetime as dt_datetime
 # from datetime import datetime as dt_datetime, date as dt_date
 from datetime import datetime, date
+from rest_framework.permissions import IsAuthenticated,IsAdminUser
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 
 from django.core.serializers.json import DjangoJSONEncoder
@@ -263,6 +265,8 @@ class MealRateView(APIView):
 
 class MealEntryView(APIView):
     renderer_classes = [UserRenderer]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminUser]
 
     def post(self, request, format=None):
         serializer = MealEntrySerializer(data=request.data)
@@ -285,6 +289,8 @@ class MealEntryView(APIView):
 
 class MealEditView(APIView):
     renderer_classes = [UserRenderer]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminUser]
     def put(self, request):
         user_id = request.data.get('user_id', None)
         date = request.data.get('date', None)
@@ -319,13 +325,15 @@ class MealEditView(APIView):
 
 class MonthlySingleUserDetailsView(APIView,UserDetailsMixin):
     renderer_classes = [UserRenderer]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
     def get(self, request):
-        user_id = request.query_params.get('user')
+       
         year = request.query_params.get('year', None)
         month = request.query_params.get('month', None)
 
         
-        if not user_id or not year or not month:
+        if not year or not month:
             return Response({'error': 'user, year, and month are required query parameters.'}, status=400)
         try:
             year = int(year)
@@ -347,7 +355,7 @@ class MonthlySingleUserDetailsView(APIView,UserDetailsMixin):
 
         # Get the user instance from the CustomUser model
         try:
-            user = CustomUser.objects.get(id=user_id)
+            user = CustomUser.objects.get(id=request.user.id)
 
         except CustomUser.DoesNotExist:
             return Response({'error': 'User not found.'}, status=404)
@@ -483,6 +491,8 @@ class AllBazarListView(APIView):
 
 class MonthlyAllUserDetailsView(APIView,UserDetailsMixin):
     renderer_classes = [UserRenderer]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminUser]
     def get(self, request):
        
         year = request.query_params.get('year', None)
@@ -813,6 +823,8 @@ class PaymentEntryView(APIView):
     
     
 class AvailabilityCheckView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminUser]
     def post(self, request, *args, **kwargs):
         # Set default values for month, year, and is_available
         current_date = datetime.now()
