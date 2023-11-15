@@ -551,6 +551,8 @@ class MonthlyAllUserDetailsView(APIView,UserDetailsMixin):
     
 class ExtraExpensesView(APIView):
     renderer_classes = [UserRenderer]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminUser]
     def post(self, request):
         try:
             # Get the phone number from the request data
@@ -585,6 +587,8 @@ class ExtraExpensesView(APIView):
 
 class AllExtraExpenseView(APIView):
     renderer_classes = [UserRenderer]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = []
     def get(self, request):
         year = request.query_params.get('year')
         month = request.query_params.get('month')
@@ -621,6 +625,8 @@ class AllExtraExpenseView(APIView):
     
     
     def put(self, request):
+        self.permission_classes = [IsAdminUser]
+        self.check_permissions(request)
         expense_id = request.query_params.get('expense_id', None)
 
         if expense_id is None :
