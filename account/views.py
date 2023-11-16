@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
-from account.serializer import UserRegistrationSerializer ,UserLoginSerializer,UserProfileSerializer,UserChangePasswordSerializer,SendPasswordResetEmailSerializer,UserPasswordRestSerializer,UserProfileEditSerializer
+from account.serializer import UserRegistrationSerializer ,UserLoginSerializer,UserProfileSerializer,UserChangePasswordSerializer,SendPasswordResetEmailSerializer,UserPasswordRestSerializer,UserProfileEditSerializer, ChangeManagerSerializer
 from django.contrib.auth import authenticate,login
 from account.renderers import UserRenderer
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -13,6 +13,7 @@ from django.utils import timezone
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.db.models import ProtectedError
 from django.contrib.auth import logout
+from django.http import JsonResponse
 
 def get_tokens_for_user(user):
     refresh = RefreshToken.for_user(user)
@@ -171,6 +172,51 @@ class UserEditView(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+
+
+class ChangeManagerView(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAdminUser]
+
+    def put(self, request):
+        newManager_id = request.query_params.get('newManager_id', None)
+
+        if newManager_id is None:
+            return Response({'error': 'Next Manager ID is required in the request Params.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not newManager_id.isdigit():
+            return Response({'error': "'newManager_id' expected a number but got other"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            nextManager = CustomUser.objects.get(id=newManager_id)
+        except CustomUser.DoesNotExist:
+            return Response({'error': 'Next manager not found.'}, status=404)
+        
+        try:
+            currentManager = CustomUser.objects.get(id=request.user.id)
+        except CustomUser.DoesNotExist:
+            return Response({'error': 'Current manager not found.'}, status=404)
+
+
+        # Change Manager ship
+        if currentManager.id != nextManager.id:
+            # Update is_staff attribute using the serializer
+            nextManager_serializer = ChangeManagerSerializer(nextManager, {'is_staff': True}, partial=True)
+            nextManager_serializer.is_valid(raise_exception=True)
+            nextManager_serializer.save()
+
+            currentManager_serializer = ChangeManagerSerializer(currentManager, {'is_staff': False}, partial=True)
+            currentManager_serializer.is_valid(raise_exception=True)
+            currentManager_serializer.save()
+
+            
+
+            return Response({'msg': 'Manager changed successfully'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'msg' :'You are already manager'}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+        # If none of the above conditions are met, return a default error response
+        return Response({'error': 'User not found.'}, status=404)
 
     
 

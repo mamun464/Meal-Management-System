@@ -448,7 +448,7 @@ class AllBazarListView(APIView):
         # user_id = request.query_params.get('user', None)
 
         if bazar_id is None : #or user_id is None
-            return Response({'error': 'Bazar ID and User ID are required in the request Params.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Bazar ID required in the request Params.'}, status=status.HTTP_400_BAD_REQUEST)
         
         if not bazar_id.isdigit() : #or not user_id.isdigit()
             return Response({'error':  " 'id' expected a number but got other"}, status=status.HTTP_400_BAD_REQUEST)
