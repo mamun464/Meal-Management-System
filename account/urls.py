@@ -2,7 +2,7 @@
 # from django.contrib import admin
 from django.urls import path
 
-from account.views import UserRegistrationView,UserLoginView,UserProfileView,UserPasswordChangeView,SendPasswordResetEmailView,UserPasswordResetView,UserDeleteView,UserEditView,LogoutAPIView,ChangeManagerView
+from account.views import UserRegistrationView,UserLoginView,UserProfileView,UserPasswordChangeView,SendPasswordResetEmailView,UserPasswordResetView,UserDeleteView,UserEditView,LogoutAPIView,ChangeManagerView,AllUserListView
 
 urlpatterns = [
     path('register/', UserRegistrationView.as_view(),name='register'),
@@ -15,6 +15,7 @@ urlpatterns = [
     path('update/', UserEditView.as_view(),name='edit-user'),
     path('logout/', LogoutAPIView.as_view(), name='api_logout'),
     path('managership/', ChangeManagerView.as_view(), name='change-manager'),
+    path('user-list/', AllUserListView.as_view(), name='user-list'),
     
     
 ]

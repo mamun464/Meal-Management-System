@@ -14,8 +14,8 @@ class CustomUserManager(BaseUserManager):
         if not password:
             raise ValueError('Password is not provided')
 
-        extra_fields.setdefault('is_staff',True)
         extra_fields.setdefault('is_active',True)
+        extra_fields.setdefault('is_staff',False)
         extra_fields.setdefault('is_superuser',False)
 
         user = self.model(
@@ -50,6 +50,7 @@ class CustomUser(AbstractBaseUser,PermissionsMixin):
     is_staff = models.BooleanField(default=False) # must needed, otherwise you won't be able to loginto django-admin.
     is_active = models.BooleanField(default=True) # must needed, otherwise you won't be able to loginto django-admin.
     is_superuser = models.BooleanField(default=False) # this field we inherit from PermissionsMixin.
+    is_manager = models.BooleanField(default=False) # this field we inherit from PermissionsMixin.
 
 
     

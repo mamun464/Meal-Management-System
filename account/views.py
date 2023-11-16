@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
-from account.serializer import UserRegistrationSerializer ,UserLoginSerializer,UserProfileSerializer,UserChangePasswordSerializer,SendPasswordResetEmailSerializer,UserPasswordRestSerializer,UserProfileEditSerializer, ChangeManagerSerializer
+from account.serializer import UserRegistrationSerializer ,UserLoginSerializer,UserProfileSerializer,UserChangePasswordSerializer,SendPasswordResetEmailSerializer,UserPasswordRestSerializer,UserProfileEditSerializer, ChangeManagerSerializer,AllUserListSerializer
 from django.contrib.auth import authenticate,login
 from account.renderers import UserRenderer
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -201,22 +201,51 @@ class ChangeManagerView(APIView):
         # Change Manager ship
         if currentManager.id != nextManager.id:
             # Update is_staff attribute using the serializer
-            nextManager_serializer = ChangeManagerSerializer(nextManager, {'is_staff': True}, partial=True)
+
+            if currentManager.is_superuser:
+                searchManager = CustomUser.objects.filter(is_staff=True, is_manager=True).first()
+
+                if searchManager is not None:
+                        nextManager_serializer = ChangeManagerSerializer(nextManager, {'is_staff': True, 'is_manager': True}, partial=True)
+                        nextManager_serializer.is_valid(raise_exception=True)
+                        nextManager_serializer.save()
+
+                        currentManager_serializer = ChangeManagerSerializer(searchManager, {'is_staff': False, 'is_manager': False}, partial=True)
+                        currentManager_serializer.is_valid(raise_exception=True)
+                        currentManager_serializer.save()
+                        return Response({'msg': 'Manager changed successfully'}, status=status.HTTP_200_OK)
+                else:
+                    nextManager_serializer = ChangeManagerSerializer(nextManager, {'is_staff': True, 'is_manager': True}, partial=True)
+                    nextManager_serializer.is_valid(raise_exception=True)
+                    nextManager_serializer.save()
+                    return Response({'msg': 'Manager changed successfully'}, status=status.HTTP_200_OK)
+                
+            
+            nextManager_serializer = ChangeManagerSerializer(nextManager, {'is_staff': True, 'is_manager': True}, partial=True)
             nextManager_serializer.is_valid(raise_exception=True)
             nextManager_serializer.save()
 
-            currentManager_serializer = ChangeManagerSerializer(currentManager, {'is_staff': False}, partial=True)
+            currentManager_serializer = ChangeManagerSerializer(currentManager, {'is_staff': False, 'is_manager': False}, partial=True)
             currentManager_serializer.is_valid(raise_exception=True)
             currentManager_serializer.save()
-
-            
-
             return Response({'msg': 'Manager changed successfully'}, status=status.HTTP_200_OK)
-        else:
-            return Response({'msg' :'You are already manager'}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        
+        # else:
+        #     return Response({'msg' :'You are already manager'}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
-        # If none of the above conditions are met, return a default error response
-        return Response({'error': 'User not found.'}, status=404)
+
+class AllUserListView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        # Retrieve all active users
+        active_users = CustomUser.objects.filter(is_active=True,is_superuser=False)
+
+        # Serialize the active users
+        serializer = AllUserListSerializer(active_users, many=True)
+
+        # Return the serialized data in the response
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     
 

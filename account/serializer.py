@@ -143,8 +143,13 @@ class UserProfileEditSerializer(serializers.ModelSerializer):
 class ChangeManagerSerializer(serializers.ModelSerializer):
      class Meta:
         model = CustomUser
-        fields = ['id','email', 'is_staff']
-          
+        fields = ['id','email', 'is_staff','is_manager']
+
+class AllUserListSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = CustomUser
+            fields = ['id','fullName','email','phone_no', 'user_profile_img','is_active','is_staff']
+
     
 
 
