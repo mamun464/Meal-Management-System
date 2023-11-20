@@ -11,7 +11,7 @@ urlpatterns = [
     path('changepassword/', UserPasswordChangeView.as_view(),name='passwordChange'),
     path('send-rest-password-email/', SendPasswordResetEmailView.as_view(),name='send-rest-password-email'),
     path('rest-password/<uid>/<token>/', UserPasswordResetView.as_view(),name='rest-password'),
-    path('delete/<phone>/', UserDeleteView.as_view(),name='delete-user'),
+    path('delete/<id>/', UserDeleteView.as_view(),name='delete-user'),
     path('update/', UserEditView.as_view(),name='edit-user'),
     path('logout/', LogoutAPIView.as_view(), name='api_logout'),
     path('managership/', ChangeManagerView.as_view(), name='change-manager'),
@@ -19,7 +19,7 @@ urlpatterns = [
 
 
     # path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    # path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     # path('verifytoken/',TokenVerifyView.as_view(), name="token-verify"),
     
     

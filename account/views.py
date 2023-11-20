@@ -39,7 +39,11 @@ class UserRegistrationView(APIView):
         if serializer.is_valid(raise_exception=True):
             user = serializer.save()
             token=get_tokens_for_user(user)
-            return Response({'token':token ,'msg':'New Registration Successfull'},status=status.HTTP_201_CREATED)
+            return Response({
+                'msg':'New Registration Successful',
+                'new_user': serializer.data,
+                 'token':token ,
+                },status=status.HTTP_201_CREATED)
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
 
 # Create your views here.
@@ -60,7 +64,10 @@ class UserLoginView(APIView):
             # Log the user in (if needed)
             login(request, user)
             token=get_tokens_for_user(user)
-            return Response({'token':token, 'msg': 'Login successful'},status=status.HTTP_200_OK)
+            return Response({
+                'msg': 'Login successful',
+                'token':token,
+                },status=status.HTTP_200_OK)
 
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
 
@@ -125,11 +132,11 @@ class UserDeleteView(APIView):
     permission_classes = [IsAdminUser]
     renderer_classes = [UserRenderer]
 
-    def delete(self, request, phone):
+    def delete(self, request, id):
         try:
-            user = CustomUser.objects.get(phone_no=phone)
+            user = CustomUser.objects.get(id=id)
         except CustomUser.DoesNotExist:
-            return Response({'errors': f"{phone} isn't Found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'errors': f"{id} isn't Found"}, status=status.HTTP_404_NOT_FOUND)
 
         # Check if the user is a staff or superuser
         if user.is_superuser:
