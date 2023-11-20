@@ -6,6 +6,9 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from account.utils import Util
 from django import forms
+from rest_framework.exceptions import AuthenticationFailed
+from django.contrib.auth import authenticate
+from django.utils import timezone
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
 
@@ -42,6 +45,26 @@ class UserLoginSerializer(serializers.ModelSerializer):
         class Meta:
             model = CustomUser
             fields = ['phone_no', 'password',]
+
+        def validate(self, data):
+            phone_no = data.get('phone_no')
+            password = data.get('password')
+
+            user = authenticate(phone_no=phone_no, password=password)
+
+            if user is not None:
+                if not user.is_active:
+                    raise AuthenticationFailed('Account disabled, contact with Manager')
+
+                # Update last_login time for the user
+                user.last_login = timezone.now()
+                user.save()
+
+                # Return both the authenticated user and validated data
+                return {'user': user, 'data': data}
+            else:
+                raise AuthenticationFailed(f'Invalid credentials, try again or Account disabled')
+        
 
 class UserProfileSerializer(serializers.ModelSerializer):
      class Meta:

@@ -13,7 +13,7 @@ from django.utils import timezone
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.db.models import ProtectedError
 from django.contrib.auth import logout
-from django.http import JsonResponse
+
 
 def get_tokens_for_user(user):
     refresh = RefreshToken.for_user(user)
@@ -50,24 +50,24 @@ class UserLoginView(APIView):
         
         serializer = UserLoginSerializer(data=request.data)         
         if serializer.is_valid(raise_exception=True):
-            phone_no= serializer.data.get('phone_no')
-            password= serializer.data.get('password')
-            user = authenticate(phone_no=phone_no,password=password)
+            # Access both the authenticated user and validated data from the serializer
+            validated_data = serializer.validated_data
+            user = validated_data['user']
 
-            if user is not None:
-                user.last_login = timezone.now()
-                user.save()
-                login(request, user)
-                token=get_tokens_for_user(user)
-                return Response({'token':token, 'msg': 'Login successful'},status=status.HTTP_200_OK)
-            else:
-                return Response({'errors':{'non_field_errors':['Login Failed! Invalid Phone Number or Password']}},status=status.HTTP_404_NOT_FOUND)
+            # Your existing logic here
+            user.last_login = timezone.now()
+            user.save()
+            # Log the user in (if needed)
+            login(request, user)
+            token=get_tokens_for_user(user)
+            return Response({'token':token, 'msg': 'Login successful'},status=status.HTTP_200_OK)
+
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
 
 class LogoutAPIView(APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
-
+        
         try:
             refresh_token = request.data.get('refresh_token')
 
