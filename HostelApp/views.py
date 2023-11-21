@@ -120,6 +120,7 @@ class UserDetailsMixin:
         permissions ={
             'is_active': user.is_active,
             'is_staff': user.is_staff,
+            'is_manager': user.is_manager,
             'is_superuser': user.is_superuser,
         }
 
@@ -331,15 +332,17 @@ class MonthlySingleUserDetailsView(APIView,UserDetailsMixin):
        
         year = request.query_params.get('year', None)
         month = request.query_params.get('month', None)
+        user_id = request.query_params.get('user_id', None)
 
         
-        if not year or not month:
+        if not year or not month or not user_id:
             return Response({'error': 'user, year, and month are required query parameters.'}, status=400)
         try:
             year = int(year)
             month = int(month)
+            user_id =int(user_id)
         except ValueError:
-            return Response({'error': 'Year and month must be valid integers.'}, status=400)
+            return Response({'error': 'User Id, Year and month must be valid integers.'}, status=400)
         
 
         
@@ -355,7 +358,7 @@ class MonthlySingleUserDetailsView(APIView,UserDetailsMixin):
 
         # Get the user instance from the CustomUser model
         try:
-            user = CustomUser.objects.get(id=request.user.id)
+            user = CustomUser.objects.get(id=user_id)
 
         except CustomUser.DoesNotExist:
             return Response({'error': 'User not found.'}, status=404)
@@ -849,8 +852,8 @@ class AvailabilityCheckView(APIView):
     def post(self, request, *args, **kwargs):
         # Set default values for month, year, and is_available
         current_date = datetime.now()
-        month = 8#current_date.month
-        year = 2023#current_date.year
+        month = current_date.month
+        year = current_date.year
         is_available = True
 
         # Get all active users
