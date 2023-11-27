@@ -142,14 +142,16 @@ class UserDetailsMixin:
 
         meal_cost_monthly= round((meal_rate_floot * monthly_total_meal_single_user),2)
 
-        # remaining Balance calculations
+                # remaining Balance calculations
         remaining_balance = round(total_pay_amount - (meal_cost_monthly+cost_data['extra_cost_per_head']),2)
         if remaining_balance < 0:
             show_remaining_balance = 0
             due_balance = remaining_balance*(-1)
+            due_status= True
         else:
             show_remaining_balance=remaining_balance
             due_balance = 0
+            due_status= False
 
         response_data = {
             'user_details': {
@@ -162,10 +164,12 @@ class UserDetailsMixin:
                 'total_taka_submit': total_pay_amount,
                 'extra_cost': cost_data,
                 # 'real_rate2' : meal_rate_floot,#meal_rate_response,
-                'real_rate' : meal_rate_response,
+                'meal_rate' : meal_rate_response,
                 'meal_cost_monthly': meal_cost_monthly,
                 'remain_balance' : show_remaining_balance,
+                'due_status': due_status,
                 'due' : due_balance,
+
                 'payment_history' : total_pay_history,
             },
            
@@ -173,7 +177,6 @@ class UserDetailsMixin:
         }
 
         return response_data
-
         # Instead of returning the Response, return the data
     def serialize_datetime(self, datetime_obj):
             if datetime_obj is not None:
