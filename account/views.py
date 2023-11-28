@@ -237,18 +237,45 @@ class ChangeManagerView(APIView):
         #     return Response({'msg' :'You are already manager'}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
 
+
+
 class AllUserListView(APIView):
-    permission_classes = [IsAdminUser]
+    # permission_classes = [IsAdminUser]
 
     def get(self, request):
         # Retrieve all active users
-        active_users = CustomUser.objects.filter(is_active=True,is_superuser=False)
+        active_users = CustomUser.objects.filter(is_superuser=False)
 
         # Serialize the active users
         serializer = AllUserListSerializer(active_users, many=True)
 
         # Return the serialized data in the response
         return Response(serializer.data, status=status.HTTP_200_OK)
+class ActiveUserListView(APIView):
+    # permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        # Retrieve all active users
+        active_users = CustomUser.objects.filter(is_active=True , is_superuser=False)
+
+        # Serialize the active users
+        serializer = AllUserListSerializer(active_users, many=True)
+
+        # Return the serialized data in the response
+        return Response(serializer.data, status=status.HTTP_200_OK)
+class DeactiveUserListView(APIView):
+    # permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        # Retrieve all active users
+        active_users = CustomUser.objects.filter(is_active=False , is_superuser=False)
+
+        # Serialize the active users
+        serializer = AllUserListSerializer(active_users, many=True)
+
+        # Return the serialized data in the response
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
     
 

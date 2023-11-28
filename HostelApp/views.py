@@ -87,18 +87,28 @@ class UserDetailsMixin:
             availability_check__year=year,
 
         ).distinct().count()
+        is_applicable_extra_cost = False
+        is_available = UserAvailabilityCheck.objects.filter(user_id=user.id, month=month).exists()
 
         # Avoid division by zero
         per_head_extra_cost =round((totall_monthly_extra_expense / person_in_month), 2) if person_in_month != 0 else 0
 
-        cost_data={
-            "total_extra_cost":totall_monthly_extra_expense,
-             "Active_User" : person_in_month,
-             "extra_cost_per_head" : per_head_extra_cost,
+        if is_available:
+            cost_data={
+                "total_extra_cost":totall_monthly_extra_expense,
+                "Active_User" : person_in_month,
+                "extra_cost_per_head" : per_head_extra_cost,
 
-            "datewise_expese":datewise_expese,
-           
-        }
+                "datewise_expese":datewise_expese, 
+            }
+        else:
+            cost_data={
+                "total_extra_cost":0,
+                "Active_User" : 0,
+                "extra_cost_per_head" : 0,
+
+                "datewise_expese":0, 
+            }
 
         # Filter MealHistory entries for the specific user, year, and month
         meal_entries = MealHistory.objects.filter(
@@ -142,7 +152,7 @@ class UserDetailsMixin:
 
         meal_cost_monthly= round((meal_rate_floot * monthly_total_meal_single_user),2)
 
-                # remaining Balance calculations
+        # remaining Balance calculations
         remaining_balance = round(total_pay_amount - (meal_cost_monthly+cost_data['extra_cost_per_head']),2)
         if remaining_balance < 0:
             show_remaining_balance = 0
@@ -176,8 +186,8 @@ class UserDetailsMixin:
             'date_wise_meal': MonthlyDateWiseMeal,
         }
 
-        return response_data
-        # Instead of returning the Response, return the data
+        return response_data 
+           # Instead of returning the Response, return the data
     def serialize_datetime(self, datetime_obj):
             if datetime_obj is not None:
                 return DjangoJSONEncoder().encode(datetime_obj).strip('"')
