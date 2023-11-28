@@ -87,18 +87,28 @@ class UserDetailsMixin:
             availability_check__year=year,
 
         ).distinct().count()
+        is_applicable_extra_cost = False
+        is_available = UserAvailabilityCheck.objects.filter(user_id=user.id, month=month).exists()
 
         # Avoid division by zero
         per_head_extra_cost =round((totall_monthly_extra_expense / person_in_month), 2) if person_in_month != 0 else 0
 
-        cost_data={
-            "total_extra_cost":totall_monthly_extra_expense,
-             "Active_User" : person_in_month,
-             "extra_cost_per_head" : per_head_extra_cost,
+        if is_available:
+            cost_data={
+                "total_extra_cost":totall_monthly_extra_expense,
+                "Active_User" : person_in_month,
+                "extra_cost_per_head" : per_head_extra_cost,
 
-            "datewise_expese":datewise_expese,
-           
-        }
+                "datewise_expese":datewise_expese, 
+            }
+        else:
+            cost_data={
+                "total_extra_cost":0,
+                "Active_User" : 0,
+                "extra_cost_per_head" : 0,
+
+                "datewise_expese":0, 
+            }
 
         # Filter MealHistory entries for the specific user, year, and month
         meal_entries = MealHistory.objects.filter(
@@ -147,9 +157,11 @@ class UserDetailsMixin:
         if remaining_balance < 0:
             show_remaining_balance = 0
             due_balance = remaining_balance*(-1)
+            due_status= True
         else:
             show_remaining_balance=remaining_balance
             due_balance = 0
+            due_status= False
 
         response_data = {
             'user_details': {
@@ -162,10 +174,12 @@ class UserDetailsMixin:
                 'total_taka_submit': total_pay_amount,
                 'extra_cost': cost_data,
                 # 'real_rate2' : meal_rate_floot,#meal_rate_response,
-                'real_rate' : meal_rate_response,
+                'meal_rate' : meal_rate_response,
                 'meal_cost_monthly': meal_cost_monthly,
                 'remain_balance' : show_remaining_balance,
+                'due_status': due_status,
                 'due' : due_balance,
+
                 'payment_history' : total_pay_history,
             },
            
@@ -267,7 +281,7 @@ class MealRateView(APIView):
 class MealEntryView(APIView):
     renderer_classes = [UserRenderer]
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAdminUser]
+    #permission_classes = [IsAdminUser]
 
     def post(self, request, format=None):
         serializer = MealEntrySerializer(data=request.data)
@@ -291,7 +305,7 @@ class MealEntryView(APIView):
 class MealEditView(APIView):
     renderer_classes = [UserRenderer]
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAdminUser]
+    #permission_classes = [IsAdminUser]
     def put(self, request):
         user_id = request.data.get('user_id', None)
         date = request.data.get('date', None)
@@ -326,8 +340,8 @@ class MealEditView(APIView):
 
 class MonthlySingleUserDetailsView(APIView,UserDetailsMixin):
     renderer_classes = [UserRenderer]
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    # authentication_classes = [JWTAuthentication]
+    # #permission_classes = [IsAuthenticated]
     def get(self, request):
        
         year = request.query_params.get('year', None)
@@ -375,7 +389,7 @@ class MonthlySingleUserDetailsView(APIView,UserDetailsMixin):
 class BazarEntryView(APIView):
     renderer_classes = [UserRenderer]
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAdminUser]
+    #permission_classes = [IsAdminUser]
     def post(self, request):
         try:
             # Get the phone number from the request data
@@ -409,7 +423,7 @@ class BazarEntryView(APIView):
 class AllBazarListView(APIView):
     renderer_classes = [UserRenderer]
     authentication_classes = [JWTAuthentication]
-    permission_classes = []
+    #permission_classes = []
     def get(self, request):
         year = request.query_params.get('year')
         month = request.query_params.get('month')
@@ -444,7 +458,7 @@ class AllBazarListView(APIView):
         return Response({'Success':True,'data':bazar_serializer.data},status=status.HTTP_200_OK)
     
     def put(self, request):
-        self.permission_classes = [IsAdminUser]
+        # self.permission_classes = [IsAdminUser]
         self.check_permissions(request)
 
         bazar_id = request.query_params.get('bazar_id', None)
@@ -475,9 +489,9 @@ class AllBazarListView(APIView):
     
     def delete(self, request):
         # IsAdminUser applited
-        # self.permission_classes = [IsAdminUser]
+        # #self.permission_classes= [IsAdminUser]
         self.renderer_classes = [UserRenderer]
-        self.permission_classes = [IsAdminUser]
+        # self.permission_classes = [IsAdminUser]
         self.check_permissions(request)
 
         bazar_id = request.query_params.get('bazar_id', None)
@@ -502,7 +516,7 @@ class AllBazarListView(APIView):
 class MonthlyAllUserDetailsView(APIView,UserDetailsMixin):
     renderer_classes = [UserRenderer]
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAdminUser]
+    # #permission_classes = [IsAdminUser]
     def get(self, request):
        
         year = request.query_params.get('year', None)
@@ -555,7 +569,7 @@ class MonthlyAllUserDetailsView(APIView,UserDetailsMixin):
 class ExtraExpensesView(APIView):
     renderer_classes = [UserRenderer]
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAdminUser]
+    #permission_classes = [IsAdminUser]
     def post(self, request):
         try:
             # Get the phone number from the request data
@@ -591,7 +605,7 @@ class ExtraExpensesView(APIView):
 class AllExtraExpenseView(APIView):
     renderer_classes = [UserRenderer]
     authentication_classes = [JWTAuthentication]
-    permission_classes = []
+    #permission_classes = []
     def get(self, request):
         year = request.query_params.get('year')
         month = request.query_params.get('month')
@@ -628,7 +642,7 @@ class AllExtraExpenseView(APIView):
     
     
     def put(self, request):
-        self.permission_classes = [IsAdminUser]
+        #self.permission_classes= [IsAdminUser]
         self.check_permissions(request)
         expense_id = request.query_params.get('expense_id', None)
 
@@ -653,9 +667,9 @@ class AllExtraExpenseView(APIView):
     
     def delete(self, request):
         # IsAdminUser applited
-        # self.permission_classes = [IsAdminUser]
+        # #self.permission_classes= [IsAdminUser]
         self.renderer_classes = [UserRenderer]
-        self.permission_classes = [IsAdminUser]
+        #self.permission_classes= [IsAdminUser]
         self.check_permissions(request)
         
 
@@ -681,9 +695,9 @@ class AllExtraExpenseView(APIView):
 class PaymentEntryView(APIView):
     renderer_classes = [UserRenderer]
     authentication_classes = [JWTAuthentication]
-    permission_classes = []
+    #permission_classes = []
     def post(self, request):
-        self.permission_classes = [IsAdminUser]
+        #self.permission_classes= [IsAdminUser]
         self.check_permissions(request)
         try:
             # Get the phone number from the request data
@@ -761,7 +775,7 @@ class PaymentEntryView(APIView):
         return Response({'Success':True,'data':extra_expenses_serializer.data},status=status.HTTP_200_OK)
     
     def put(self, request):
-        self.permission_classes = [IsAdminUser]
+        #self.permission_classes= [IsAdminUser]
         self.check_permissions(request)
         pay_id = request.query_params.get('pay_id', None)
         phone_no = request.data.get('phone_no', None)
@@ -823,7 +837,7 @@ class PaymentEntryView(APIView):
 
     def delete(self, request):
         # IsAdminUser applited
-        self.permission_classes = [IsAdminUser]
+        #self.permission_classes= [IsAdminUser]
         self.renderer_classes = [UserRenderer]
         self.check_permissions(request)
 
@@ -848,7 +862,7 @@ class PaymentEntryView(APIView):
     
 class AvailabilityCheckView(APIView):
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAdminUser]
+    #permission_classes = [IsAdminUser]
     def post(self, request, *args, **kwargs):
         # Set default values for month, year, and is_available
         current_date = datetime.now()
