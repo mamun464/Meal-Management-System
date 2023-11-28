@@ -148,6 +148,27 @@ class UserDeleteView(APIView):
             return Response({'msg': f'User {user.fullName} cannot be deleted because they have data in other DB.'}, status=status.HTTP_403_FORBIDDEN)
 
         return Response({'msg': f'{user.fullName} deleted from your system'}, status=status.HTTP_204_NO_CONTENT)
+    
+class UserStatusChangeView(APIView):
+    authentication_classes = [JWTAuthentication]
+    # permission_classes = [IsAdminUser]
+    renderer_classes = [UserRenderer]
+
+    def put(self, request, id):
+        try:
+            user = CustomUser.objects.get(id=id)
+        except CustomUser.DoesNotExist:
+            return Response({'errors': f"{id} isn't Found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check if the user is already deactivated
+        # if not user.is_active:
+        #     return Response({'msg': f'User {user.fullName} is already deactivated'}, status=status.HTTP_200_OK)
+
+        # Deactivate the user
+        user.is_active = not user.is_active
+        user.save()
+
+        return Response({'msg': f'User {user.fullName} deactivated from your system'}, status=status.HTTP_200_OK)
 
 class UserEditView(APIView):
 
@@ -237,8 +258,6 @@ class ChangeManagerView(APIView):
         #     return Response({'msg' :'You are already manager'}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
 
-
-
 class AllUserListView(APIView):
     # permission_classes = [IsAdminUser]
 
@@ -275,7 +294,6 @@ class DeactiveUserListView(APIView):
 
         # Return the serialized data in the response
         return Response(serializer.data, status=status.HTTP_200_OK)
-
 
     
 
