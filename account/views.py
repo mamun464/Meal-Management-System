@@ -13,6 +13,7 @@ from django.utils import timezone
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.db.models import ProtectedError
 from django.contrib.auth import logout
+import requests
 
 
 def get_tokens_for_user(user):
@@ -168,7 +169,7 @@ class UserStatusChangeView(APIView):
         user.is_active = not user.is_active
         user.save()
 
-        return Response({'msg': f'User {user.fullName} deactivated from your system'}, status=status.HTTP_200_OK)
+        return Response({'msg': f'User {user.fullName} status-change in database'}, status=status.HTTP_200_OK)
 
 class UserEditView(APIView):
 
@@ -295,7 +296,66 @@ class DeactiveUserListView(APIView):
         # Return the serialized data in the response
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
+class PhotoUpload(APIView):
     
+    def upload_to_imagebb(self, api_key, image_data):
+        api_url = "https://api.imgbb.com/1/upload"
+        files = {"image": image_data}
+        params = {"key": api_key}
+
+        response = requests.post(api_url, files=files, params=params)
+
+        try:
+            result = response.json()
+
+            # Check if the upload was successful
+            if result['success']:
+                return result["data"]["url"]
+
+            # If not successful, handle the error
+            error_msg = result.get("error", "Unknown error")
+            print("Error in JSON response:", error_msg)
+        except ValueError:
+            # If the content is not in JSON format, print the raw content
+            print("Non-JSON response content:", response.content)
+
+        return None
+
+    def put(self, request, id):
+        try:
+            user = CustomUser.objects.get(id=id)
+        except CustomUser.DoesNotExist:
+            return Response({'error': f"User with ID {id} not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check if 'user_profile_img' key is present in the request data
+        if 'user_profile_img' in request.data:
+            # Assuming you have an image file in the request data
+            image_file = request.data.get("user_profile_img")
+
+            # Handle the case where image_file is None
+            if image_file is None:
+                # If no image is provided, store None in the user_profile_img field
+                user.user_profile_img = None
+            else:
+                # Replace 'your_api_key' with your actual ImageBB API key
+                api_key = "db34544520f57ff0f15d2b1ece2794b3"
+                print("Image received")
+
+                # Upload the image to ImageBB
+                image_url = self.upload_to_imagebb(api_key, image_file.read())
+                print("Image Url", image_url)
+
+                if image_url:
+                    # Update the user's profile image URL in the database
+                    user.user_profile_img = image_url
+                else:
+                    return Response({'error': 'Failed to upload image'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Save the user object after processing the image (or lack thereof)
+        user.save()
+
+        return Response({'msg': f'Profile image for {user.username} updated successfully'}, status=status.HTTP_200_OK)
 
 
                 
