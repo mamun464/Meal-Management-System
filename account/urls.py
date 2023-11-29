@@ -2,7 +2,7 @@
 # from django.contrib import admin
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView,TokenRefreshView,TokenVerifyView
-from account.views import UserRegistrationView,UserLoginView,UserProfileView,UserPasswordChangeView,SendPasswordResetEmailView,UserPasswordResetView,UserDeleteView,UserEditView,LogoutAPIView,ChangeManagerView,AllUserListView,ActiveUserListView,DeactiveUserListView
+from account.views import UserRegistrationView,UserLoginView,UserProfileView,UserPasswordChangeView,SendPasswordResetEmailView,UserPasswordResetView,UserDeleteView,UserEditView,LogoutAPIView,ChangeManagerView,AllUserListView,ActiveUserListView,DeactiveUserListView,UserStatusChangeView,PhotoUpload
 
 urlpatterns = [
     path('register/', UserRegistrationView.as_view(),name='register'),
@@ -13,8 +13,11 @@ urlpatterns = [
     path('rest-password/<uid>/<token>/', UserPasswordResetView.as_view(),name='rest-password'),
     path('delete/<id>/', UserDeleteView.as_view(),name='delete-user'),
     path('update/', UserEditView.as_view(),name='edit-user'),
+    path('status-change/<id>/', UserStatusChangeView.as_view(),name='status-change'),
     path('logout/', LogoutAPIView.as_view(), name='api_logout'),
     path('managership/', ChangeManagerView.as_view(), name='change-manager'),
+    path('upload/<int:id>/', PhotoUpload.as_view(),name='image-upload'),
+
     path('user-list/', AllUserListView.as_view(), name='user-list'),
     path('active-user/', ActiveUserListView.as_view(), name='active-user'),
     path('deactive-user/', DeactiveUserListView.as_view(), name='deactive-user'),

@@ -120,7 +120,7 @@ class UserDetailsMixin:
         user_details = {
             'user_id': user.id,
             'fullName': user.fullName,
-            'profile_img': user.user_profile_img.url if user.user_profile_img else None,
+            'profile_img': user.user_profile_img,
             'email': user.email,
             'phone_no': user.phone_no,
             'last_login': user.last_login,

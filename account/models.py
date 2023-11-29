@@ -44,7 +44,7 @@ class CustomUser(AbstractBaseUser,PermissionsMixin):
     username = None
     fullName = models.CharField(max_length=100, null=False)
     email = models.EmailField(db_index=True, unique=True,null=False, max_length=254)
-    user_profile_img = models.ImageField(upload_to="profile",null=True,blank=True)
+    user_profile_img = models.URLField(blank=True,null=True)
     phone_no=models.CharField(db_index=True,max_length=20, null=False,unique=True)
 
     is_staff = models.BooleanField(default=False) # must needed, otherwise you won't be able to loginto django-admin.
@@ -79,15 +79,17 @@ class CustomUser(AbstractBaseUser,PermissionsMixin):
         return True
 
     
-    def save(self, *args, **kwargs):
-        # Check if an old image exists
-        if self.pk:
-            old_instance = self.__class__.objects.get(pk=self.pk)
-            if old_instance.user_profile_img:
-                # Delete the old image file from the filesystem
-                if os.path.isfile(old_instance.user_profile_img.path):
-                    os.remove(old_instance.user_profile_img.path)
-        super().save(*args, **kwargs)
+    # def save(self, *args, **kwargs):
+    #     # Check if an old image URL exists
+    #     if self.pk:
+    #         old_instance = self.__class__.objects.get(pk=self.pk)
+    #         if old_instance.user_profile_img:
+    #             # No need to check if it's a file on the filesystem for URL fields
+    #             # Delete the old image URL
+    #             old_instance.user_profile_img = None  # Or set it to a default image URL if needed
+    #             old_instance.save()
+
+        # super().save(*args, **kwargs)
     # @property
     # def is_staff(self):
     #     "Is the user a member of staff?"
