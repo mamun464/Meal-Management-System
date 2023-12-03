@@ -6,5 +6,6 @@ from InventoryApp.views import ItemCreateView
 
 urlpatterns = [
     path('create-item/', ItemCreateView.as_view(),name='create-item'),
+    path('get-item/', ItemCreateView.as_view(),name='get-item'),
 
 ]
