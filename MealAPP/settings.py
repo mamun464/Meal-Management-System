@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'MealAPP',
     'account',
     'HostelApp',
+    'InventoryApp',
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
@@ -111,7 +112,7 @@ REST_FRAMEWORK = {
       
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
-    # 'DEFAULT_RENDERER_CLASSES': ('rest_framework.renderers.JSONRenderer',)
+    'DEFAULT_RENDERER_CLASSES': ('rest_framework.renderers.JSONRenderer',),
    
 }
 
