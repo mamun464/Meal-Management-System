@@ -7,7 +7,7 @@ class ItemSerializer(serializers.ModelSerializer):
             model = Item
             fields = ['item_name', 'variant', 'unit',]
 
-class ItemSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Item
-        fields = ['id', 'item_name', 'variant']
+# class ItemSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Item
+#         fields = ['id', 'item_name', 'variant']

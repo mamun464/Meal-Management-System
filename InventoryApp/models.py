@@ -4,7 +4,7 @@ import datetime
 # Create your models here.
 class Item(models.Model):
     UNIT_CHOICES = [
-        ('piece', 'Piece'),
+        ('pcs', 'Piece'),
         ('kg', 'KG'),
     ]
     item_name = models.CharField(max_length=200)
