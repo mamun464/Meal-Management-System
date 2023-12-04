@@ -8,6 +8,7 @@ from rest_framework import status
 from .models import Item,ItemInventory
 from django.db.models import ProtectedError
 from datetime import datetime as dt
+from django.shortcuts import get_object_or_404
 # Create your views here.
 
 class ItemView(APIView):
@@ -216,5 +217,19 @@ class DamageAdd(APIView):
                              'msg': 'Successfully Edited Inventory.',
                              'data':serializer.data}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class GetItemVariant(APIView):
+    def get(self, request):
+        item_name = request.query_params.get('item_name', None)
+
+        if not item_name:
+            return Response({'error': 'Item name is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        items = Item.objects.filter(item_name=item_name)
+        if not items:
+            return Response({'error': 'Item not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ItemSerializer(items, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
     
          

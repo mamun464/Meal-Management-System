@@ -6,7 +6,7 @@ from datetime import date
 class ItemSerializer(serializers.ModelSerializer):
     class Meta:
             model = Item
-            fields = ['item_name', 'variant', 'unit',]
+            fields = ['id','item_name', 'variant', 'unit',]
 
 
 class InventorySerializer(serializers.ModelSerializer):
@@ -78,3 +78,8 @@ class InventoryDamageSerializer(serializers.ModelSerializer):
         instance.save()
 
         return instance
+    
+# class VariantSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Item
+#         fields = ['item_name', 'variant', 'unit']
