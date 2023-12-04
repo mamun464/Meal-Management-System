@@ -24,20 +24,20 @@ class ItemInventory(models.Model):
     quantity = models.DecimalField(max_digits=10, decimal_places=2, null=False)
     price_per_unit = models.DecimalField(max_digits=10, decimal_places=2, null=False)
     damage_quantity = models.DecimalField(max_digits=10, decimal_places=2, null=True,blank=True)
-    purchase_date = models.DateField(null=False,default=datetime.date.today)
+    purchase_date = models.DateField(null=False)
 
     def __str__(self):
-        return f"{self.item} - {self.quantity} {self.get_unit_display()}"
+        return f"{self.item} - {self.quantity}"
 
     class Meta:
         verbose_name_plural = 'Item Inventories'
 
-    def save(self, *args, **kwargs):
-        # If damage_quantity is specified, reduce the quantity accordingly
-        if self.damage_quantity:
-            self.quantity -= self.damage_quantity
+    # def save(self, *args, **kwargs):
+    #     # If damage_quantity is specified, reduce the quantity accordingly
+    #     if self.damage_quantity:
+    #         self.quantity -= self.damage_quantity
 
-        super().save(*args, **kwargs)
+    #     super().save(*args, **kwargs)
 
 
 class UsageInventory(models.Model):

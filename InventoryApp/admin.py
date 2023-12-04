@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import Item, ItemInventory,UsageInventory
 
 class ItemInventoryAdmin(admin.ModelAdmin):
-    list_display = ('id', 'item', 'price_per_unit', 'damage_quantity', 'purchase_date')
+    list_display = ('id', 'item','quantity', 'price_per_unit', 'damage_quantity', 'purchase_date')
     search_fields = ('item__item_name', 'item__variant')  # Searching by related Item fields
     list_filter = ( 'item','purchase_date')  # Add filters for unit and purchase date
 
