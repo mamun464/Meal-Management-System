@@ -136,7 +136,7 @@ class ItemInventoryView(APIView):
             filters['item'] = item_id
 
         # Filter ItemInventory data based on the provided filters
-        filtered_data = ItemInventory.objects.filter(**filters)
+        filtered_data = filtered_data = ItemInventory.objects.select_related('item').filter(**filters)
 
         # Serialize the filtered data
         serializer = InventorySerializer(filtered_data, many=True)
@@ -231,5 +231,11 @@ class GetItemVariant(APIView):
 
         serializer = ItemSerializer(items, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+class GetUniqueItemNames(APIView):
+    def get(self, request):
+        unique_item_names = Item.objects.values_list('item_name', flat=True).distinct()
+        return Response({'unique_item_names': list(unique_item_names)}, status=status.HTTP_200_OK)
     
          

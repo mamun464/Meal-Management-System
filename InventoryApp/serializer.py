@@ -5,14 +5,16 @@ from datetime import date
 
 class ItemSerializer(serializers.ModelSerializer):
     class Meta:
-            model = Item
-            fields = ['id','item_name', 'variant', 'unit',]
+        model = Item
+        fields = '__all__'
 
 
 class InventorySerializer(serializers.ModelSerializer):
+    item = ItemSerializer()  # Include the related item fields
+
     class Meta:
         model = ItemInventory
-        fields = ['id','item', 'quantity', 'price_per_unit','damage_quantity','purchase_date']
+        fields = '__all__'
 
     def validate_item(self, value):
         # Check if the item exists in the Item model

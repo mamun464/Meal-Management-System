@@ -23,7 +23,7 @@ class ItemInventory(models.Model):
     item = models.ForeignKey(Item, on_delete=models.PROTECT, related_name='item_inventory')
     quantity = models.DecimalField(max_digits=10, decimal_places=2, null=False)
     price_per_unit = models.DecimalField(max_digits=10, decimal_places=2, null=False)
-    damage_quantity = models.DecimalField(max_digits=10, decimal_places=2, null=True,blank=True)
+    damage_quantity = models.DecimalField(max_digits=10, decimal_places=2, null=True,blank=True,default=0)
     purchase_date = models.DateField(null=False)
 
     def __str__(self):
