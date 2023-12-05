@@ -8,6 +8,7 @@ from rest_framework import status
 from .models import Item,ItemInventory
 from django.db.models import ProtectedError
 from datetime import datetime as dt
+from decimal import Decimal
 from django.shortcuts import get_object_or_404
 # Create your views here.
 
@@ -232,13 +233,28 @@ class DamageAdd(APIView):
         except ItemInventory.DoesNotExist:
             return Response({'error': 'Inventory Item entry not found.'}, status=status.HTTP_404_NOT_FOUND)
         
-        serializer = InventoryDamageSerializer(item_inventory_entry,data=request.data,partial=True)
+        
+        # Assuming request.data contains 'damage_quantity' key with the new damage value
+        new_damage_quantity_str = request.data.get('damage_quantity', '0')
+
+        # Convert new_damage_quantity to Decimal
+        new_damage_quantity = Decimal(new_damage_quantity_str)
+
+        # Convert request.data to a mutable dictionary
+        mutable_data = request.data.copy()
+
+        # Add the new damage to the existing damage_quantity in the mutable dictionary
+        mutable_data['damage_quantity'] = item_inventory_entry.damage_quantity + new_damage_quantity
+
+        serializer = InventoryDamageSerializer(item_inventory_entry, data=mutable_data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response({'success': True,
                              'msg': 'Successfully Edited Inventory.',
                              'data':serializer.data}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'success': False,
+                             'msg': 'Damage Issued Failure',
+                             'Error':serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     
 class GetItemVariant(APIView):
     def get(self, request):
