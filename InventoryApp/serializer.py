@@ -85,3 +85,10 @@ class InventoryDamageSerializer(serializers.ModelSerializer):
 #     class Meta:
 #         model = Item
 #         fields = ['item_name', 'variant', 'unit']
+
+class SingleInventorySerializer(serializers.ModelSerializer):
+    item = ItemSerializer()  # Include the related item fields
+
+    class Meta:
+        model = ItemInventory
+        fields = '__all__'

@@ -1,7 +1,7 @@
 from django.shortcuts import render
 
 from rest_framework.views import APIView
-from InventoryApp.serializer import ItemSerializer,ItemSerializer,InventorySerializer,InventoryDamageSerializer
+from InventoryApp.serializer import ItemSerializer,ItemSerializer,InventorySerializer,InventoryDamageSerializer,SingleInventorySerializer
 from account.renderers import UserRenderer
 from rest_framework.response import Response
 from rest_framework import status
@@ -90,6 +90,28 @@ class ItemView(APIView):
         return Response({
             'success': True,
             'msg': f'{item_entry.item_name}-{item_entry.variant} -Deleted from your system'},status=status.HTTP_204_NO_CONTENT)
+
+class SingleInventoryView(APIView):
+    def get(self, request, format=None):
+        # ItemSerializer
+        inventory_id = request.query_params.get('inventory_id', None)
+        # user_id = request.query_params.get('user', None)
+
+        if inventory_id is None : #or user_id is None
+            return Response({'error': 'inventory id required in the request Params.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not inventory_id.isdigit() : #or not user_id.isdigit()
+            return Response({'error':  " 'id' expected a number but got other"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            item_inventory_entry = ItemInventory.objects.get(id=inventory_id)
+            # user = CustomUser.objects.get(id=user_id, is_active=True)
+        except ItemInventory.DoesNotExist:
+            return Response({'error': 'Item entry not found.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = SingleInventorySerializer(item_inventory_entry)
+        return Response({'status': True, 'data': serializer.data})
+        
+        
 
 class ItemInventoryView(APIView):
     renderer_classes = [UserRenderer]
