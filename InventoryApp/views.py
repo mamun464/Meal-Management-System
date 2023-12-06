@@ -5,10 +5,11 @@ from InventoryApp.serializer import ItemSerializer,ItemSerializer,InventorySeria
 from account.renderers import UserRenderer
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Item,ItemInventory
+from .models import Item,ItemInventory,UsageInventory
 from django.db.models import ProtectedError
 from datetime import datetime as dt
 from decimal import Decimal
+from django.db.models import Sum
 from django.shortcuts import get_object_or_404
 # Create your views here.
 
@@ -275,5 +276,45 @@ class GetUniqueItemNames(APIView):
     def get(self, request):
         unique_item_names = Item.objects.values_list('item_name', flat=True).distinct()
         return Response({'unique_item_names': list(unique_item_names)}, status=status.HTTP_200_OK)
+    
+class StockView(APIView):
+    def get(self, request):
+        try:
+            item_id = request.query_params.get('item_id', None)
+            
+            if item_id is None : #or user_id is None
+                return Response({'error': 'item id required in the request Params.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+            if not item_id.isdigit() : #or not user_id.isdigit()
+                return Response({'error':  " 'id' expected a number but got other"}, status=status.HTTP_400_BAD_REQUEST)
+
+            item_inventory = ItemInventory.objects.filter(item=item_id)
+            total_quantity = item_inventory.aggregate(total_quantity=Sum('quantity'))['total_quantity'] or 0
+            total_damage_quantity = item_inventory.aggregate(total_damage_quantity=Sum('damage_quantity'))['total_damage_quantity'] or 0
+            purchase_count = item_inventory.count()
+
+           
+
+            item_usages = UsageInventory.objects.filter(item=item_id)
+            total_usages = item_usages.aggregate(usages=Sum('quantity_used'))['usages'] or 0
+
+            result={
+                'purchase_count': purchase_count,
+                'total_purchases_quantity':total_quantity,
+                'total_usages': total_usages,
+                'total_damage_quantity': total_damage_quantity,
+                'inventory_stock': total_quantity-total_usages-total_damage_quantity,
+
+            }
+
+
+            return Response({
+                'success': True,
+                'data': result
+            }, status=status.HTTP_200_OK)
+        except ItemInventory.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'ItemInventory not found'}, status=status.HTTP_404_NOT_FOUND)
     
          
