@@ -127,37 +127,48 @@ class ItemInventoryView(APIView):
                           'data': serializer.data})
     def get(self, request, format=None):
         # Get query parameters from the request
-        item_id = request.query_params.get('item')
-        month = request.query_params.get('month')
-        year = request.query_params.get('year')
+        item_id = request.query_params.get('item',None)
+        month = request.query_params.get('month',None)
+        year = request.query_params.get('year',None)
+        
         
 
-        # Validate and parse month and year
+            # Validate and parse month and year
         try:
-            if month:
-                month = int(month)
+            if month is not None:
                 if not year:
                     raise ValueError("Year is required when month is provided.")
-            if year:
-                year = int(year)
+                month = int(month)
+                if not (1 <= month <= 12):
+                    raise ValueError("Month must be in the range 1 to 12.")
+
+                if year:
+                    year = int(year)
+
         except ValueError as e:
             return Response({'error': str(e)}, status=400)
+
         current_year = dt_datetime.datetime.now().year
         current_month = dt_datetime.datetime.now().month
-        if year < 1900 or year > current_year:
-            return Response({'error':'Year Must be valid Or not greater than current year.'}, status=status.HTTP_400_BAD_REQUEST)
+        current_day = dt_datetime.datetime.now().day
 
-            # Check if month is within a valid range (1 to 12)
-        if month < 1 or month > 12 or (current_year == year and current_month < month):
-            return Response({'error': 'Month Must have Valid Month or must request less that current month'}, status=status.HTTP_400_BAD_REQUEST)
+            # Determine start_date and end_date based on user input or current date
+        if year is not None and month is not None:
+            start_date = dt(year, month, 1)
+            end_date = dt(year, month + 1, 1) if month < 12 else dt(year + 1, 1, 1)
+        elif year is not None:
+            start_date = dt(year, 1, 1)
+            end_date = dt(year + 1, 1, 1)
+        else:
+                # If neither year nor month is provided, fetch data for all months and years
+            start_date = dt(1900, 1, 1)  # Assuming a reasonable starting date
+            end_date = dt(current_year, current_month, current_day) 
 
         # Initialize filters
         filters = {}
 
         # Add month filter if provided
         if month:
-            start_date = dt(year, month, 1)
-            end_date = dt(year, month + 1, 1) if month < 12 else dt(year + 1, 1, 1)
             filters['purchase_date__gte'] = start_date
             filters['purchase_date__lt'] = end_date
 
@@ -291,49 +302,52 @@ class StockView(APIView):
     def get(self, request):
         try:
             item_id = request.query_params.get('item_id', None)
-            month = request.query_params.get('month')
-            year = request.query_params.get('year')
-
+            month = request.query_params.get('month',None)
+            year = request.query_params.get('year',None)
 
             # Validate and parse month and year
             try:
-                if month:
-                    month = int(month)
+                if month is not None:
                     if not year:
                         raise ValueError("Year is required when month is provided.")
-                    
+                    month = int(month)
+                    if not (1 <= month <= 12):
+                        raise ValueError("Month must be in the range 1 to 12.")
+
                 if year:
                     year = int(year)
-                    
+
             except ValueError as e:
                 return Response({'error': str(e)}, status=400)
-            
+
             current_year = dt_datetime.datetime.now().year
             current_month = dt_datetime.datetime.now().month
-            if year < 1900 or year > current_year:
-                return Response({'Year Must be valid Or not greater than current year.'}, status=status.HTTP_400_BAD_REQUEST)
+            current_day = dt_datetime.datetime.now().day
 
-            # Check if month is within a valid range (1 to 12)
-            if month < 1 or month > 12 or (current_year == year and current_month < month):
-                return Response({'error': 'Month Must have Valid Month or must request less that current month'}, status=status.HTTP_400_BAD_REQUEST)
-
-            # Initialize filters
-            item_filters = {}
-            usage_filters = {}
-
-            # Add month and year filters if provided
-            if month:
+            # Determine start_date and end_date based on user input or current date
+            if year is not None and month is not None:
                 start_date = dt(year, month, 1)
                 end_date = dt(year, month + 1, 1) if month < 12 else dt(year + 1, 1, 1)
-                item_filters['purchase_date__gte'] = start_date
-                item_filters['purchase_date__lt'] = end_date
-                usage_filters['using_date__gte'] = start_date
-                usage_filters['using_date__lt'] = end_date
+            elif year is not None:
+                start_date = dt(year, 1, 1)
+                end_date = dt(year + 1, 1, 1)
+            else:
+                # If neither year nor month is provided, fetch data for all months and years
+                start_date = dt(1900, 1, 1)  # Assuming a reasonable starting date
+                end_date = dt(current_year, current_month, current_day)    # Assuming a reasonable ending date
 
-            # Add year filter if provided
-            if year:
-                item_filters['purchase_date__year'] = year
-                usage_filters['using_date__year'] = year
+            # Handle the case where end_date is None
+            if end_date:
+                item_filters = {
+                    'purchase_date__gte': start_date,
+                    'purchase_date__lt': end_date
+                }
+                usage_filters = {
+                    'using_date__gte': start_date,
+                    'using_date__lt': end_date
+                }
+            else:
+                return Response({'error': 'Invalid date range provided.'}, status=status.HTTP_400_BAD_REQUEST)
 
             # Continue with your existing code, applying filters to ItemInventory and UsageInventory queries
             if item_id is None:
@@ -358,14 +372,22 @@ class StockView(APIView):
                 'total_usages': total_usages,
                 'total_damage_quantity': total_damage_quantity,
                 'inventory_stock': total_quantity - total_usages - total_damage_quantity,
+                'low_stock':  total_quantity - total_usages - total_damage_quantity <= 5
             }
 
             return Response({
                 'success': True,
                 'data': result
             }, status=status.HTTP_200_OK)
+
         except ItemInventory.DoesNotExist:
             return Response({
                 'success': False,
                 'error': 'ItemInventory not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+
+
+
          
