@@ -7,7 +7,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import Item,ItemInventory,UsageInventory
 from django.db.models import ProtectedError
-from datetime import datetime as dt
+from datetime import datetime as dt, date
+import datetime as dt_datetime
 from decimal import Decimal
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404
@@ -126,9 +127,10 @@ class ItemInventoryView(APIView):
                           'data': serializer.data})
     def get(self, request, format=None):
         # Get query parameters from the request
+        item_id = request.query_params.get('item')
         month = request.query_params.get('month')
         year = request.query_params.get('year')
-        item_id = request.query_params.get('item') 
+        
 
         # Validate and parse month and year
         try:
@@ -140,6 +142,14 @@ class ItemInventoryView(APIView):
                 year = int(year)
         except ValueError as e:
             return Response({'error': str(e)}, status=400)
+        current_year = dt_datetime.datetime.now().year
+        current_month = dt_datetime.datetime.now().month
+        if year < 1900 or year > current_year:
+            return Response({'error':'Year Must be valid Or not greater than current year.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if month is within a valid range (1 to 12)
+        if month < 1 or month > 12 or (current_year == year and current_month < month):
+            return Response({'error': 'Month Must have Valid Month or must request less that current month'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Initialize filters
         filters = {}
@@ -160,7 +170,7 @@ class ItemInventoryView(APIView):
             filters['item'] = item_id
 
         # Filter ItemInventory data based on the provided filters
-        filtered_data = filtered_data = ItemInventory.objects.select_related('item').filter(**filters)
+        filtered_data =  ItemInventory.objects.select_related('item').filter(**filters)
 
         # Serialize the filtered data
         serializer = InventorySerializer(filtered_data, many=True)
@@ -281,32 +291,74 @@ class StockView(APIView):
     def get(self, request):
         try:
             item_id = request.query_params.get('item_id', None)
-            
-            if item_id is None : #or user_id is None
-                return Response({'error': 'item id required in the request Params.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-            if not item_id.isdigit() : #or not user_id.isdigit()
-                return Response({'error':  " 'id' expected a number but got other"}, status=status.HTTP_400_BAD_REQUEST)
+            month = request.query_params.get('month')
+            year = request.query_params.get('year')
 
-            item_inventory = ItemInventory.objects.filter(item=item_id)
+
+            # Validate and parse month and year
+            try:
+                if month:
+                    month = int(month)
+                    if not year:
+                        raise ValueError("Year is required when month is provided.")
+                    
+                if year:
+                    year = int(year)
+                    
+            except ValueError as e:
+                return Response({'error': str(e)}, status=400)
+            
+            current_year = dt_datetime.datetime.now().year
+            current_month = dt_datetime.datetime.now().month
+            if year < 1900 or year > current_year:
+                return Response({'Year Must be valid Or not greater than current year.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if month is within a valid range (1 to 12)
+            if month < 1 or month > 12 or (current_year == year and current_month < month):
+                return Response({'error': 'Month Must have Valid Month or must request less that current month'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Initialize filters
+            item_filters = {}
+            usage_filters = {}
+
+            # Add month and year filters if provided
+            if month:
+                start_date = dt(year, month, 1)
+                end_date = dt(year, month + 1, 1) if month < 12 else dt(year + 1, 1, 1)
+                item_filters['purchase_date__gte'] = start_date
+                item_filters['purchase_date__lt'] = end_date
+                usage_filters['using_date__gte'] = start_date
+                usage_filters['using_date__lt'] = end_date
+
+            # Add year filter if provided
+            if year:
+                item_filters['purchase_date__year'] = year
+                usage_filters['using_date__year'] = year
+
+            # Continue with your existing code, applying filters to ItemInventory and UsageInventory queries
+            if item_id is None:
+                return Response({'error': 'item id required in the request Params.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if not item_id.isdigit():
+                return Response({'error': " 'id' expected a number but got other"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Filter ItemInventory
+            item_inventory = ItemInventory.objects.filter(item=item_id, **item_filters)
             total_quantity = item_inventory.aggregate(total_quantity=Sum('quantity'))['total_quantity'] or 0
             total_damage_quantity = item_inventory.aggregate(total_damage_quantity=Sum('damage_quantity'))['total_damage_quantity'] or 0
             purchase_count = item_inventory.count()
 
-           
-
-            item_usages = UsageInventory.objects.filter(item=item_id)
+            # Filter UsageInventory
+            item_usages = UsageInventory.objects.filter(item=item_id, **usage_filters)
             total_usages = item_usages.aggregate(usages=Sum('quantity_used'))['usages'] or 0
 
-            result={
+            result = {
                 'purchase_count': purchase_count,
-                'total_purchases_quantity':total_quantity,
+                'total_purchases_quantity': total_quantity,
                 'total_usages': total_usages,
                 'total_damage_quantity': total_damage_quantity,
-                'inventory_stock': total_quantity-total_usages-total_damage_quantity,
-
+                'inventory_stock': total_quantity - total_usages - total_damage_quantity,
             }
-
 
             return Response({
                 'success': True,
@@ -316,5 +368,4 @@ class StockView(APIView):
             return Response({
                 'success': False,
                 'error': 'ItemInventory not found'}, status=status.HTTP_404_NOT_FOUND)
-    
          
