@@ -1,1 +1,1 @@
-web: gunicorn Meal-Management-System.wsgi ——log-file -
+web: gunicorn MealAPP.wsgi --log-file -
