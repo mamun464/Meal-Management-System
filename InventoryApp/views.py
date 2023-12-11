@@ -1,7 +1,7 @@
 from django.shortcuts import render
 
 from rest_framework.views import APIView
-from InventoryApp.serializer import ItemSerializer,ItemSerializer,InventorySerializer,InventoryDamageSerializer,SingleInventorySerializer
+from InventoryApp.serializer import ItemSerializer,ItemSerializer,InventorySerializer,InventoryDamageSerializer,SingleInventorySerializer,InventoryCreateSerializer,InvoiceSerializer
 from account.renderers import UserRenderer
 from rest_framework.response import Response
 from rest_framework import status
@@ -12,6 +12,7 @@ import datetime as dt_datetime
 from decimal import Decimal
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404
+from django.db import transaction
 # Create your views here.
 
 class ItemView(APIView):
@@ -114,12 +115,71 @@ class SingleInventoryView(APIView):
         serializer = SingleInventorySerializer(item_inventory_entry)
         return Response({'status': True, 'data': serializer.data})
         
-        
+
+class CreateInvoiceView(APIView):
+    renderer_classes = [UserRenderer]
+    def post(self, request, *args, **kwargs):
+        serializer = InvoiceSerializer(data=request.data)
+
+        if serializer.is_valid():
+            product_list = serializer.validated_data.get('product_list', [])
+
+            # Using atomic() to wrap the entire transaction
+            with transaction.atomic():
+                for product_data in product_list:
+                    item_id = product_data.get('item')
+                    if not Item.objects.filter(id=item_id).exists():
+                        error_msg = f"Item with ID {item_id} does not exist............."
+                        return Response({"error": error_msg}, status=status.HTTP_400_BAD_REQUEST)
+
+                # If all product items are valid, save the invoice
+                invoice = serializer.save()
+
+                # Create records in ItemInventory for each product in product_list
+                errors = []
+                for product_data in product_list:
+                    try:
+                        item_id = product_data.get('item', 0)
+                        quantity = product_data.get('quantity', 0)
+                        price_per_unit = product_data.get('price_per_unit', 0)
+
+                        # Create product_data dictionary
+                        product_data_dict = {
+                            'item': item_id,
+                            'invoice': invoice,
+                            'quantity': quantity,
+                            'price_per_unit': price_per_unit,
+                            'purchase_date': invoice.purchase_date,
+                        }
+
+                        # Use the serializer for validation
+                        inventory_serializer = InventoryCreateSerializer(data=product_data_dict)
+                        if inventory_serializer.is_valid():
+                            # Save the data only if validation is successful
+                            item_inventory_instance = ItemInventory(
+                                item=Item.objects.get(id=item_id),
+                                Invoice_no=invoice,
+                                quantity=quantity,
+                                price_per_unit=price_per_unit,
+                                purchase_date=invoice.purchase_date,
+                            )
+                            item_inventory_instance.save()
+                        else:
+                            errors.append(inventory_serializer.errors)
+                    except Exception as e:
+                        errors.append({"error": str(e)})
+
+                if errors:
+                    return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ItemInventoryView(APIView):
     renderer_classes = [UserRenderer]
     def post(self, request, format=None):
-        serializer = InventorySerializer(data=request.data)
+        serializer = InventoryCreateSerializer(data=request.data)
         # print(serializer.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()

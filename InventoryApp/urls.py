@@ -2,7 +2,7 @@
 # from django.contrib import admin
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView,TokenRefreshView,TokenVerifyView
-from InventoryApp.views import ItemView,ItemInventoryView,DamageAdd,GetItemVariant,GetUniqueItemNames,SingleInventoryView,StockView
+from InventoryApp.views import ItemView,ItemInventoryView,DamageAdd,GetItemVariant,GetUniqueItemNames,SingleInventoryView,StockView,CreateInvoiceView
 
 urlpatterns = [
     # Iteam Table
@@ -15,6 +15,7 @@ urlpatterns = [
     path('unique-item-names/', GetUniqueItemNames.as_view(), name='get-unique-item-names'),
 
     # itemInventory
+    path('create-invoice/', CreateInvoiceView.as_view(),name='create-invoice'),
     path('add-inventory/', ItemInventoryView.as_view(),name='add-inventory'),
     path('get-inventory/', ItemInventoryView.as_view(),name='get-inventory'),
     path('single-inventory/', SingleInventoryView.as_view(),name='single-inventory'),

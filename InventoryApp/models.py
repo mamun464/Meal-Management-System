@@ -18,9 +18,21 @@ class Item(models.Model):
 
     def __str__(self):
         return f"{self.id}: {self.item_name}-{self.variant}"
+    
+class Invoice(models.Model):
+    purchase_date = models.DateField(blank=False)
+    product_list = models.JSONField(blank=False)
+    Billing_address  = models.TextField(null=True, blank=True)
+    shipping_address = models.TextField(null=True, blank=True)
+    po_number= models.IntegerField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Invoice #{self.id}"
+    
 
 class ItemInventory(models.Model):
     item = models.ForeignKey(Item, on_delete=models.PROTECT, related_name='item_inventory')
+    Invoice_no = models.ForeignKey(Invoice, on_delete=models.PROTECT, related_name='invoice_no',blank=False, default=None)
     quantity = models.DecimalField(max_digits=10, decimal_places=2, null=False)
     price_per_unit = models.DecimalField(max_digits=10, decimal_places=2, null=False)
     damage_quantity = models.DecimalField(max_digits=10, decimal_places=2, null=True,blank=True,default=0)
