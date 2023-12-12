@@ -170,6 +170,7 @@ class CreateInvoiceView(APIView):
                         errors.append({"error": str(e)})
 
                 if errors:
+                    print("Error-1",errors)
                     return Response(errors, status=status.HTTP_400_BAD_REQUEST)
                 else:
                     return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -444,6 +445,68 @@ class StockView(APIView):
             return Response({
                 'success': False,
                 'error': 'ItemInventory not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+from io import BytesIO
+from django.http import HttpResponse
+from django.template.loader import get_template
+from xhtml2pdf import pisa
+        
+def render_to_pdf(template_src, context_dict={}):
+    template = get_template(template_src)
+    html  = template.render(context_dict)
+    result = BytesIO()
+    pdf = pisa.pisaDocument(BytesIO(html.encode("ISO-8859-1")), result)#, link_callback=fetch_resources)
+    if not pdf.err:
+        return HttpResponse(result.getvalue(), content_type='application/pdf')
+    return None
+
+
+class GenerateInvoice(APIView):
+    def post(self, request, *args, **kwargs):
+        print("Funtion called")
+        # try:
+        #     order_db = Order.objects.get(id = pk, user = request.user, payment_status = 1)     #you can filter using order_id as well
+        # except:
+        #     return HttpResponse("505 Not Found")
+        request_data = request.data
+
+        # Extract relevant information from the JSON data
+        pdf_data = {
+            "id": request_data["id"],
+            "purchase_date": request_data["purchase_date"],
+            "po_number": request_data["po_number"],
+            "Billing_address": request_data["Billing_address"],
+            "shipping_address": request_data["shipping_address"],
+            "product_list": request_data["product_list"],
+            "subtotal": request_data["subtotal"],
+        }
+
+        
+
+        data = {
+            'order_id': "012",
+            'transaction_id': "005",
+            'user_email': "mamun@main.com",
+            'date': "2015-05-13",
+            'name': "Mamun",
+            'order': "1",
+            'amount': "205",
+        }
+        pdf = render_to_pdf('invoice.html', pdf_data)
+        # return HttpResponse(pdf, content_type='application/pdf')
+
+        # force download
+        if pdf:
+            print("PDF Ready")
+            response = HttpResponse(pdf, content_type='application/pdf')
+            filename = "Invoice_%s.pdf" %(data['order_id'])
+            content = "inline; filename='%s'" %(filename)
+            #download = request.GET.get("download")
+            #if download:
+            content = "attachment; filename=%s" %(filename)
+            response['Content-Disposition'] = content
+            return response
+        return HttpResponse("Not found")
 
 
 

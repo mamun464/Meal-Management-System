@@ -25,6 +25,7 @@ class Invoice(models.Model):
     Billing_address  = models.TextField(null=True, blank=True)
     shipping_address = models.TextField(null=True, blank=True)
     po_number= models.IntegerField(null=True, blank=True)
+    subtotal= models.FloatField(null=True, blank=True)
 
     def __str__(self):
         return f"Invoice #{self.id}"

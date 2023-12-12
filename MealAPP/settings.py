@@ -30,6 +30,7 @@ DEBUG = True
 ALLOWED_HOSTS = ["*"]
 
 
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -80,7 +81,7 @@ ROOT_URLCONF = 'MealAPP.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'InventoryApp', 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
