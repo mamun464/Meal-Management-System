@@ -2,7 +2,7 @@
   <html lang="en">
   {% load static %}
   <head>
-    <title>Invoice WonderShop</title>
+    <title>Digital Meal Invoice</title>
   <style>
     .clearfix:after {
     content: "";
@@ -193,9 +193,16 @@ td.middle {
                 <tr>
                   <td scope="row">{{ product.item_info.item.item_name }} ({{ product.item_info.item.variant }})</td>
 
-                  <td>{{ product.quantity }}</td>
-                  <td>{{ product.price_per_unit }}</td>
-                  <td>{{ product.subtotal }}</td>
+                  <td>
+                    {{ product.quantity }} <span style="font-size: 0.7em; vertical-align: text-bottom;">{{ product.item_info.item.unit }}</span>
+                  </td>
+                  <td>
+                    {{ product.price_per_unit }} <span style="font-size: 0.7em; vertical-align: text-bottom;">per {{ product.item_info.item.unit }}</span>
+                  </td>
+                  <td>
+                    <img src="https://i.ibb.co/syz47jS/takaIcon.png" class="brand-logo" width="9" height="9" /> &nbsp; {{ product.subtotal }}
+                  </td>
+                  
                   
                   
                     
@@ -204,7 +211,9 @@ td.middle {
      <!-- Footer row -->
       <tr>
         <td colspan="3" style="text-align: right; font-weight: bold;">Total Amount:</td>
-        <td>{{ totalAmount }}</td>
+        <td>
+          <img src="https://i.ibb.co/syz47jS/takaIcon.png" class="brand-logo" width="9" height="9" /> &nbsp; {{ totalAmount }}
+        </td>
       </tr>
             </tbody>
         </table>
