@@ -85,6 +85,16 @@
     text-align: center;
   }
 
+table td {
+    vertical-align: middle;
+}
+
+/* Or, if you want to be more specific */
+td.middle {
+    vertical-align: middle;
+}
+
+
   table th {
     
     
@@ -149,21 +159,21 @@
       <div id="logo" style="display:flex; justify-content:center; align-items:center;">
         {#<img src="static/firstapp/images/logo.png" class="brand-logo" width=60 height=60>#} <!--not working-->
         {#<img src="static/logo.png" class="brand-logo" height="200px">#} <!--not working-->
-        <img src="D:\Mastering Django\firstproject\firstapp\logo.png" class="brand-logo" width=60 height=60>
+        <img src="https://i.ibb.co/Qc7XMhr/logo-header.png" class="brand-logo" width=60 height=60>
         <h1 class="brand-name">Digital Meal Partner</h1>
       </div>
-      <h1>INVOICE#00{{id}}</h1>
-      <div id="company" class="clearfix">
-        <div>DATE: {{purchase_date}}</div>
-        <div>PO NUMBER: <a href=# >{{po_number}}</a></div>
-        {% comment %} <div><a href="www.wondershop.in:8000">www.wondershop.in:8000</a></div> {% endcomment %}
-      </div>
+      
+      <div id="company" class="clearfix project">
+        <div style="font-weight: 500; text-align: right;">INVOICE NO: #00<span style="font-weight: 400;">{{id}}</div>
+        <div style="font-weight: 500; text-align: right;">DATE: <span style="font-weight: 400;">{{purchase_date}}</span></div>
+        <div style="font-weight: 500; text-align: right;">PO NUMBER: <span style="font-weight: 400;">{{po_number}}</span></div>
+       
+    </div>
+    
       <div id="project">
-        <div><span>BILL TO:</span> {{Billing_address}}</div>
-        <div><span>SHIP TO::</span>{{shipping_address}} </div>
-        {% comment %} <div><span>DATE:</span> {{date}}</div>
-        <div><span>INVOICE ID:</span> {{order_id}}</div>
-        <div><span>TRANSACTION ID:</span> {{transaction_id}}</div> {% endcomment %}
+        <div><span>BILL ADDRESS:</span> {{Billing_address}}</div>
+        <div><span>SHIP ADDRESS:</span>{{shipping_address}} </div>
+        
       </div>
       <br>
       <br>
@@ -185,23 +195,38 @@
 
                   <td>{{ product.quantity }}</td>
                   <td>{{ product.price_per_unit }}</td>
+                  <td>{{ product.subtotal }}</td>
                   
                   
                     
                 </tr>
                 {% endfor %}
-                <tr>
-                    <td scope="row"></td>
-                    <td scope="row"></td>
-                    <td>Total Amount: </td>
-                    <td>{{subtotal}}</td>
-                    
-                </tr>
+     <!-- Footer row -->
+      <tr>
+        <td colspan="3" style="text-align: right; font-weight: bold;">Total Amount:</td>
+        <td>{{ totalAmount }}</td>
+      </tr>
             </tbody>
         </table>
 
       </div>
-      <p style="text-align:right; font-size:12px;">*All values are in INR<p>
+      <footer>
+        <!-- Your existing footer content -->
+        <br>
+        <br>
+        <br>
+
+        <div style="margin-top: 20px; text-align: right;">
+            <div style="margin-bottom: 10px;">Authorized By:</div>
+            <!-- Replace 'https://i.ibb.co/vdMTgXG/My-Sign.png' with the actual path to your PNG signature -->
+            <img src="https://i.ibb.co/vdMTgXG/My-Sign.png" alt="Signature_Not_Found" style="width: 150px; height: auto; margin-bottom: 5px;">
+            <div style="font-weight: 500;">
+                Manunur Rashid
+                <p style="font-weight: 600;">Manager</p>
+            </div>
+        </div>
+    </footer>
+    </footer>
   </body>
 
   </html>

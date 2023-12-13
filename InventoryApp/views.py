@@ -478,20 +478,10 @@ class GenerateInvoice(APIView):
             "Billing_address": request_data["Billing_address"],
             "shipping_address": request_data["shipping_address"],
             "product_list": request_data["product_list"],
-            "subtotal": request_data["subtotal"],
+            "totalAmount": request_data["totalAmount"],
         }
 
         
-
-        data = {
-            'order_id': "012",
-            'transaction_id': "005",
-            'user_email': "mamun@main.com",
-            'date': "2015-05-13",
-            'name': "Mamun",
-            'order': "1",
-            'amount': "205",
-        }
         pdf = render_to_pdf('invoice.html', pdf_data)
         # return HttpResponse(pdf, content_type='application/pdf')
 
@@ -499,7 +489,7 @@ class GenerateInvoice(APIView):
         if pdf:
             print("PDF Ready")
             response = HttpResponse(pdf, content_type='application/pdf')
-            filename = "Invoice_%s.pdf" %(data['order_id'])
+            filename = "Invoice_%s.pdf" %(pdf_data['id'])
             content = "inline; filename='%s'" %(filename)
             #download = request.GET.get("download")
             #if download:

@@ -19,7 +19,7 @@ class UsageInventoryAdmin(admin.ModelAdmin):
     # formatted_unit.short_description = 'Unit'
 
 class InvoiceAdmin(admin.ModelAdmin):
-    list_display = ('id', 'purchase_date','product_list' ,'Billing_address', 'shipping_address', 'po_number','subtotal')
+    list_display = ('id', 'purchase_date','product_list' ,'Billing_address', 'shipping_address', 'po_number','totalAmount')
     search_fields = ['id', 'Billing_address', 'shipping_address', 'po_number']
     list_filter = ('purchase_date',)
 
