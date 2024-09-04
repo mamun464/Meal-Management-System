@@ -29,11 +29,11 @@ class CustomUserManager(BaseUserManager):
         # print(user)
         return user
 
-    def create_superuser(self, email, password, fullName, phone_no, **extra_fields):
+    def create_superuser(self, email,fullName,  phone_no, password,  **extra_fields):
         extra_fields.setdefault('is_staff',True)
         extra_fields.setdefault('is_active',True)
         extra_fields.setdefault('is_superuser',True)
-        return self.create_user(email, password, fullName, phone_no, **extra_fields)
+        return self.create_user(email,fullName,  phone_no, password, **extra_fields)
     
 
 
