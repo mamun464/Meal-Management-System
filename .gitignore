@@ -9,6 +9,8 @@ env2/
 venv/
 env3/
 venv3/
+.venv/
+.venv
 
 # Secret keys
 # (Include .env if you want it in the repo)
