@@ -5,20 +5,21 @@ __pycache__/
 
 # Dependency directories
 env/
-env2/
 venv/
+env2/
+venv2/
 env3/
 venv3/
-.venv/
-.venv
 
 # Secret keys
-# (Include .env if you want it in the repo)
-# .env
+*.env
 
 # Static files
 staticfiles/
 media/
+
+# Database
+db.sqlite3
 
 # IDE files
 .idea/
@@ -37,7 +38,3 @@ media/
 # System files
 .DS_Store
 Thumbs.db
-
-# Database file
-# Exclude if you want to keep it in the repo
-# db.sqlite3
