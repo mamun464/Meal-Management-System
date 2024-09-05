@@ -49,10 +49,15 @@ class UserRegistrationView(APIView):
         if serializer.is_valid():
             user = serializer.save()
             token=get_tokens_for_user(user)
+            user_serializer = UserProfileSerializer(user)
+            user_data = user_serializer.data
             return Response({
-                'msg':'New Registration Successful',
-                'new_user': serializer.data,
-                'token':token ,
+                'success': True,
+                'status': status.HTTP_200_OK,
+                'message': 'Registration successful',
+                'token': token,
+                'new_user': user_data,
+                
                 },status=status.HTTP_200_OK)
         
         
