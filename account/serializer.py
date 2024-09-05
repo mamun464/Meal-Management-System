@@ -64,12 +64,12 @@ class UserLoginSerializer(serializers.ModelSerializer):
                 return {'user': user, 'data': data}
             else:
                 raise AuthenticationFailed(f'Invalid credentials, try again or Account disabled')
-        
-
+            
 class UserProfileSerializer(serializers.ModelSerializer):
      class Meta:
           model = CustomUser
-          fields='__all__'
+          exclude = ['password']
+        
 
 
 class UserChangePasswordSerializer(serializers.Serializer):

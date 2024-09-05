@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.views import APIView
 from account.serializer import UserRegistrationSerializer ,UserLoginSerializer,UserProfileSerializer,UserChangePasswordSerializer,SendPasswordResetEmailSerializer,UserPasswordRestSerializer,UserProfileEditSerializer, ChangeManagerSerializer,AllUserListSerializer
 from django.contrib.auth import authenticate,login
+from rest_framework.exceptions import AuthenticationFailed,ValidationError
 from account.renderers import UserRenderer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated,IsAdminUser
@@ -35,42 +36,93 @@ class UserRegistrationView(APIView):
 
         self.check_permissions(request)
 
+        required_fields = ['email', 'fullName','email', 'phone_no','password', 'password2']
+        for field in required_fields:
+            if field not in request.data or not request.data[field]:
+                return Response({
+                    'success': False,
+                    'status': status.HTTP_400_BAD_REQUEST,
+                    'message': f'{field} is missing or empty',
+                }, status=status.HTTP_400_BAD_REQUEST)
         serializer = UserRegistrationSerializer(data=request.data)
 
-        if serializer.is_valid(raise_exception=True):
+        if serializer.is_valid():
             user = serializer.save()
             token=get_tokens_for_user(user)
             return Response({
                 'msg':'New Registration Successful',
                 'new_user': serializer.data,
-                 'token':token ,
-                },status=status.HTTP_201_CREATED)
-        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+                'token':token ,
+                },status=status.HTTP_200_OK)
+        
+        
+        else:
+            errors = serializer.errors
+            error_messages = []
+            for field, messages in errors.items():
+                error_messages.append(f"{field}: {messages[0]}")  # Concatenate field name and error message
+            msg ="\n".join(error_messages)
+            msg = msg.replace("non_field_errors: ", "")
+            return Response({
+                "success": False,
+                "status": 400,
+                "message": msg  # Join error messages with newline character
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 # Create your views here.
 
 class UserLoginView(APIView):
     renderer_classes = [UserRenderer]
     def post(self,request,format=None):
+
+        required_fields = [ 'phone_no','password']
+        for field in required_fields:
+            if field not in request.data or not request.data[field]:
+                return Response({
+                    'success': False,
+                    'status': status.HTTP_400_BAD_REQUEST,
+                    'message': f'{field} is missing or empty',
+                }, status=status.HTTP_400_BAD_REQUEST)
         
-        serializer = UserLoginSerializer(data=request.data)         
-        if serializer.is_valid(raise_exception=True):
-            # Access both the authenticated user and validated data from the serializer
-            validated_data = serializer.validated_data
+        serializer = UserLoginSerializer(data=request.data)    
+
+        try:
+            validated_data = serializer.validate(request.data)
             user = validated_data['user']
 
-            # Your existing logic here
             user.last_login = timezone.now()
             user.save()
-            # Log the user in (if needed)
             login(request, user)
-            token=get_tokens_for_user(user)
-            return Response({
-                'msg': 'Login successful',
-                'token':token,
-                },status=status.HTTP_200_OK)
+            token = get_tokens_for_user(user)
 
-        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+            user_serializer = UserProfileSerializer(user)
+            user_data = user_serializer.data
+
+            return Response({
+                'success': True,
+                'status': status.HTTP_200_OK,
+                'message': 'Successfully logged in',
+                'token': token,
+                'user_data': user_data,
+            }, status=status.HTTP_200_OK)
+
+        except (AuthenticationFailed, ValidationError) as e:
+            status_code = status.HTTP_401_UNAUTHORIZED if isinstance(e, AuthenticationFailed) else status.HTTP_400_BAD_REQUEST
+            return Response({
+                'success': False,
+                'status': status_code,
+                'message': str(e),  # Use the error message from the exception
+            }, status=status_code)
+
+        except Exception as e:
+            error_messages = []
+            for field, messages in e.detail.items():
+                error_messages.append(f"{field}: {messages[0]}")
+            return Response({
+                'success': False,
+                'status': status.HTTP_400_BAD_REQUEST,
+                'message': "\n".join(error_messages),
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 class LogoutAPIView(APIView):
     permission_classes = [IsAuthenticated]
