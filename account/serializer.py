@@ -9,6 +9,9 @@ from django import forms
 from rest_framework.exceptions import AuthenticationFailed
 from django.contrib.auth import authenticate
 from django.utils import timezone
+from decouple import config
+
+base_url = config('BASE_URL')
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
 
@@ -107,7 +110,7 @@ class SendPasswordResetEmailSerializer(serializers.Serializer):
         print(EncodedUserId)
         token = PasswordResetTokenGenerator().make_token(user)
         print('Password ResetToken:',token)
-        PassResetLink = 'http://127.0.0.1:8000/api/user/rest-password/'+EncodedUserId+'/'+token+'/'
+        PassResetLink = f'{base_url}/api/user/rest-password/'+EncodedUserId+'/'+token+'/'
         print('PassResetLink:',PassResetLink)
 
         #Email Send Code

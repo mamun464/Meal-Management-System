@@ -4,8 +4,9 @@ from django.http import HttpResponse
 from rest_framework.response import Response
 from rest_framework import status
 from .models import UserAvailabilityCheck
+from decouple import config
 
-base_url = "http://127.0.0.1:8000"
+base_url = config('BASE_URL')
 
 def CallMonthlyTotalMealAPI(year, month):
     try:
