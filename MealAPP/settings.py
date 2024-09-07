@@ -79,6 +79,12 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'MealAPP.urls'
 
+from datetime import timedelta
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+}
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -111,6 +117,8 @@ DATABASES = {
 DATABASES["default"] = dj_database_url.parse("postgresql://mamun_464:SwRybUy5jRLiN9A8Wn4JoOao5KPKJbAu@dpg-crcb47bqf0us738ije40-a.oregon-postgres.render.com/mis_db")
 
 REST_FRAMEWORK = {
+    # Custom custom_exception_handler funtion add here. you can find in exception.py file
+    'EXCEPTION_HANDLER': 'account.exceptions.custom_exception_handler',
     
     'DEFAULT_AUTHENTICATION_CLASSES': (
       

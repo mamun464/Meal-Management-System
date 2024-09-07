@@ -15,6 +15,7 @@ import datetime as dt_datetime
 from datetime import datetime, date
 from rest_framework.permissions import IsAuthenticated,IsAdminUser
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.views import exception_handler
 
 
 from django.core.serializers.json import DjangoJSONEncoder
@@ -340,23 +341,33 @@ class MealEditView(APIView):
 
 class MonthlySingleUserDetailsView(APIView,UserDetailsMixin):
     renderer_classes = [UserRenderer]
-    # authentication_classes = [JWTAuthentication]
-    # #permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    renderer_classes = [UserRenderer]
     def get(self, request):
        
         year = request.query_params.get('year', None)
         month = request.query_params.get('month', None)
         user_id = request.query_params.get('user_id', None)
 
+        current_user=request.user
         
         if not year or not month or not user_id:
-            return Response({'error': 'user, year, and month are required query parameters.'}, status=400)
+            return Response({
+                'success': False,
+                'status': status.HTTP_404_NOT_FOUND,
+                'message': "user, year, and month are required query parameters.",
+            }, status=status.HTTP_404_NOT_FOUND)
         try:
             year = int(year)
             month = int(month)
             user_id =int(user_id)
         except ValueError:
-            return Response({'error': 'User Id, Year and month must be valid integers.'}, status=400)
+            return Response({
+                'success': False,
+                'status': status.HTTP_404_NOT_FOUND,
+                'message': "'User Id, Year and month must be valid integers.",
+            }, status=status.HTTP_404_NOT_FOUND)
         
 
         
@@ -364,25 +375,58 @@ class MonthlySingleUserDetailsView(APIView,UserDetailsMixin):
         current_year = dt_datetime.datetime.now().year
         current_month = dt_datetime.datetime.now().month
         if year < 1900 or year > current_year:
-            return Response({'Year Must be valid Or not greater than current year.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'success': False,
+                'status': status.HTTP_404_NOT_FOUND,
+                'message': "Year Must be valid Or not greater than current year.",
+            }, status=status.HTTP_404_NOT_FOUND)
 
         # Check if month is within a valid range (1 to 12)
         if month < 1 or month > 12 or (current_year == year and current_month < month):
-            return Response({'error': 'Month Must have Valid Month or must request less that current month'}, status=status.HTTP_400_BAD_REQUEST)
-
+            return Response({
+                'success': False,
+                'status': status.HTTP_404_NOT_FOUND,
+                'message': "Month Must have Valid Month or must request less that current month",
+            }, status=status.HTTP_404_NOT_FOUND)
+        
         # Get the user instance from the CustomUser model
         try:
             user = CustomUser.objects.get(id=user_id)
 
         except CustomUser.DoesNotExist:
-            return Response({'error': 'User not found.'}, status=404)
+            return Response({
+                'success': False,
+                'status': status.HTTP_404_NOT_FOUND,
+                'message': "User not found",
+            }, status=status.HTTP_404_NOT_FOUND)
         
-        
+        except Exception as e :
+            return Response({
+                'success': False,
+                'status': status.HTTP_500_INTERNAL_SERVER_ERROR,
+                'message': str(e),
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        response_data = self.get_user_data(user, request)
-        # response_data={'user': response_data}
-        # Serialize the data
-        return Response(response_data, status=status.HTTP_200_OK)
+        if current_user.is_superuser or current_user.is_manager or current_user.id == user_id:
+            
+            response_data = self.get_user_data(user, request)
+            # response_data={'user': response_data}
+            # Serialize the data
+            return Response({
+                    'success': True,
+                    'status':200,
+                    'message': 'successful retrieved Data',
+                    'data': response_data,
+                    
+                    },status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'success': True,
+                'status':200,
+                'message': 'successful retrieved Data',
+                'data': UserProfileSerializer(user).data,
+                    
+                },status=status.HTTP_200_OK)
     
 
 

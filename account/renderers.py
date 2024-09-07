@@ -8,7 +8,7 @@ class UserRenderer(renderers.JSONRenderer):
         # print("Inside Render funtion")
         if 'ErrorDetail' in str(data):
             # print("Inside ErrorDetails funtion")
-            response = json.dumps({'errors':data})
+            response = json.dumps(data)
         else:
             response = json.dumps(data)
             # print("Inside Else funtion")
