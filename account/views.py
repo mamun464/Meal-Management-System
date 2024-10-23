@@ -320,14 +320,28 @@ class AllUserListView(APIView):
     # permission_classes = [IsAdminUser]
 
     def get(self, request):
-        # Retrieve all active users
-        active_users = CustomUser.objects.filter(is_superuser=False)
+        try:
+            # Retrieve all active users
+            active_users = CustomUser.objects.filter(is_superuser=False)
 
-        # Serialize the active users
-        serializer = AllUserListSerializer(active_users, many=True)
+            # Serialize the active users
+            serializer = AllUserListSerializer(active_users, many=True)
 
-        # Return the serialized data in the response
-        return Response(serializer.data, status=status.HTTP_200_OK)
+            # Return the serialized data in the response
+            return Response({
+                    'success': True,
+                    'status': status.HTTP_200_OK,
+                    'message': 'Successfully retrieved all users',
+                    'data': serializer.data,
+                })
+        except Exception as e:
+            return Response({
+                'success': False,
+                'status': status.HTTP_500_INTERNAL_SERVER_ERROR,
+                'message': f'An error occurred while processing the request: {str(e)}',
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    
 class ActiveUserListView(APIView):
     # permission_classes = [IsAdminUser]
 
