@@ -6,7 +6,7 @@ class UserAdminConfig(UserAdmin):
     search_fields = ('email', 'fullName','phone_no',)
     list_filter =('is_active','is_staff','is_superuser')
     ordering = ('id','phone_no')
-    list_display =('id','email','fullName','phone_no','user_profile_img','is_active','is_staff','is_superuser','is_manager','last_login')
+    list_display =('id','email','fullName','phone_no','user_profile_img','role','is_active','is_staff','is_superuser','is_manager','last_login')
 
     fieldsets = (
     (None, {'fields': ('fullName', 'email', 'phone_no', 'password',)}),

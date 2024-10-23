@@ -264,22 +264,43 @@ class ChangeManagerView(APIView):
         newManager_id = request.query_params.get('newManager_id', None)
 
         if newManager_id is None:
-            return Response({'error': 'Next Manager ID is required in the request Params.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'success': False,
+                'status': status.HTTP_400_BAD_REQUEST,
+                'message': 'Next Manager ID is required in the request Params.'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         if not newManager_id.isdigit():
-            return Response({'error': "'newManager_id' expected a number but got other"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'success': False,
+                'status': status.HTTP_400_BAD_REQUEST,
+                'message': "'newManager_id' expected a number but got other."
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             nextManager = CustomUser.objects.get(id=newManager_id)
         except CustomUser.DoesNotExist:
-            return Response({'error': 'Next manager not found.'}, status=404)
-        
+            return Response({
+                'success': False,
+                'status': 404,
+                'message': 'Next manager not found.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             currentManager = CustomUser.objects.get(id=request.user.id)
         except CustomUser.DoesNotExist:
-            return Response({'error': 'Current manager not found.'}, status=404)
+            return Response({
+                'success': False,
+                'status': 404,
+                'message': 'Current manager not found.'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-
+        if nextManager.is_superuser:
+            return Response({
+                'success': False,
+                'status': 403,
+                'message': 'Superuser cannot be a Manager'
+            }, status=status.HTTP_403_FORBIDDEN)
         # Change Manager ship
         if currentManager.id != nextManager.id:
             # Update is_staff attribute using the serializer
@@ -288,32 +309,48 @@ class ChangeManagerView(APIView):
                 searchManager = CustomUser.objects.filter(is_staff=True, is_manager=True).first()
 
                 if searchManager is not None:
-                        nextManager_serializer = ChangeManagerSerializer(nextManager, {'is_staff': True, 'is_manager': True}, partial=True)
+                        nextManager_serializer = ChangeManagerSerializer(nextManager, {'is_staff': True, 'is_manager': True,'role': 'manager'}, partial=True)
                         nextManager_serializer.is_valid(raise_exception=True)
                         nextManager_serializer.save()
 
-                        currentManager_serializer = ChangeManagerSerializer(searchManager, {'is_staff': False, 'is_manager': False}, partial=True)
+                        currentManager_serializer = ChangeManagerSerializer(searchManager, {'is_staff': False, 'is_manager': False,'role': 'member'}, partial=True)
                         currentManager_serializer.is_valid(raise_exception=True)
                         currentManager_serializer.save()
-                        return Response({'msg': 'Manager changed successfully'}, status=status.HTTP_200_OK)
+                        return Response({
+                            'success': True,
+                            'status': status.HTTP_200_OK,
+                            'message': 'Manager changed successfully'
+                        }, status=status.HTTP_200_OK)
                 else:
-                    nextManager_serializer = ChangeManagerSerializer(nextManager, {'is_staff': True, 'is_manager': True}, partial=True)
+                    nextManager_serializer = ChangeManagerSerializer(nextManager, {'is_staff': True, 'is_manager': True,'role': 'manager'}, partial=True)
                     nextManager_serializer.is_valid(raise_exception=True)
                     nextManager_serializer.save()
-                    return Response({'msg': 'Manager changed successfully'}, status=status.HTTP_200_OK)
+                    return Response({
+                            'success': True,
+                            'status': status.HTTP_200_OK,
+                            'message': 'Manager changed successfully'
+                        }, status=status.HTTP_200_OK)
                 
             
-            nextManager_serializer = ChangeManagerSerializer(nextManager, {'is_staff': True, 'is_manager': True}, partial=True)
+            nextManager_serializer = ChangeManagerSerializer(nextManager, {'is_staff': True, 'is_manager': True,'role': 'manager'}, partial=True)
             nextManager_serializer.is_valid(raise_exception=True)
             nextManager_serializer.save()
 
-            currentManager_serializer = ChangeManagerSerializer(currentManager, {'is_staff': False, 'is_manager': False}, partial=True)
+            currentManager_serializer = ChangeManagerSerializer(currentManager, {'is_staff': False, 'is_manager': False,'role': 'member'}, partial=True)
             currentManager_serializer.is_valid(raise_exception=True)
             currentManager_serializer.save()
-            return Response({'msg': 'Manager changed successfully'}, status=status.HTTP_200_OK)
+            return Response({
+                'success': True,
+                'status': status.HTTP_200_OK,
+                'message': 'Manager changed successfully'
+            }, status=status.HTTP_200_OK)
         
-        # else:
-        #     return Response({'msg' :'You are already manager'}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        else:
+            return Response({
+                'success': False,
+                'status': status.HTTP_400_BAD_REQUEST,
+                'message': 'Selected user is already a manager'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AllUserListView(APIView):
