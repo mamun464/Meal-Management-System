@@ -229,30 +229,80 @@ class UserStatusChangeView(APIView):
         return Response({'msg': f'User {user.fullName} status-change in database'}, status=status.HTTP_200_OK)
 
 class UserEditView(APIView):
-
-    # IsAuthenticated applited
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
-    # def get(self, request, format=None):
-    #     serializer = UserProfileSerializer(request.user)
-        
-    #     return Response(serializer.data,status= status.HTTP_200_OK)
 
-    def put(self,request):
-        serializer = UserProfileEditSerializer(request.user)
-        userData=serializer.data
-        user_id = userData['id']
+    def put(self, request, *args, **kwargs):
+        user = request.user
+        required_fields = ['request_user_id']
+        for field in required_fields:
+            if field not in request.query_params or not request.query_params[field]:
+                return Response({
+                    'success': False,
+                    'status': status.HTTP_400_BAD_REQUEST,
+                    'message': f'{field} is missing or empty',
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        request_user_id = request.query_params.get('request_user_id')
+
+        # Check if the user ID in the request matches the authenticated user's ID
+        if str(user.id) != str(request_user_id):
+            # If the user is not the same, check for admin or manager roles
+            if user.role not in ['admin', 'manager']:
+                return Response({
+                    'success': False,
+                    'status': status.HTTP_403_FORBIDDEN,
+                    'message': "You do not have permission to update this user's information.",
+                }, status=status.HTTP_403_FORBIDDEN)
+
         try:
-            user=CustomUser.objects.get(pk=user_id)
+            # Fetch the user object by the ID provided in the request
+            user_to_update = CustomUser.objects.get(pk=request_user_id)
         except CustomUser.DoesNotExist:
-             return Response(status=status.HTTP_404_NOT_FOUND)
-        
-        serializer=UserProfileEditSerializer(user,data=request.data,  partial=True)
+            return Response({
+                'success': False,
+                'status': status.HTTP_404_NOT_FOUND,
+                'message': 'User not found',
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # Proceed with partial update (allow missing fields)
+        serializer = UserProfileEditSerializer(user_to_update, data=request.data, partial=True)
 
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'success': True,
+                'status': status.HTTP_200_OK,
+                'message': 'User updated successfully',
+                'data': serializer.data,
+            }, status=status.HTTP_200_OK)
+        
+        return Response({
+            'success': False,
+            'status': status.HTTP_400_BAD_REQUEST,
+            'message': 'Invalid data',
+            'errors': serializer.errors,
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    # # IsAuthenticated applited
+    # renderer_classes = [UserRenderer]
+    # permission_classes = [IsAuthenticated]
+
+    # def put(self,request):
+    #     serializer = UserProfileEditSerializer(request.user)
+    #     userData=serializer.data
+    #     user_id = userData['id']
+    #     try:
+    #         user=CustomUser.objects.get(pk=user_id)
+    #     except CustomUser.DoesNotExist:
+    #          return Response(status=status.HTTP_404_NOT_FOUND)
+        
+    #     serializer=UserProfileEditSerializer(user,data=request.data,  partial=True)
+
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
 
