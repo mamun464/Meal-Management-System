@@ -254,6 +254,8 @@ class UserEditView(APIView):
                     'status': status.HTTP_403_FORBIDDEN,
                     'message': "You do not have permission to update this user's information.",
                 }, status=status.HTTP_403_FORBIDDEN)
+            
+        
 
         try:
             # Fetch the user object by the ID provided in the request
@@ -264,6 +266,25 @@ class UserEditView(APIView):
                 'status': status.HTTP_404_NOT_FOUND,
                 'message': 'User not found',
             }, status=status.HTTP_404_NOT_FOUND)
+
+         # Check if `is_active` is being updated
+        new_is_active = request.data.get('is_active')
+        if new_is_active is not None and user_to_update.is_active != new_is_active:
+            # Check if the current user is trying to change their own `is_active` field
+            if user.id == user_to_update.id and user.role == 'manager':
+                return Response({
+                    'success': False,
+                    'status': status.HTTP_403_FORBIDDEN,
+                    'message': 'Managers cannot change their own active status.',
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            # Only allow admins or managers to change `is_active`
+            if user.role not in ['admin', 'manager']:
+                return Response({
+                    'success': False,
+                    'status': status.HTTP_403_FORBIDDEN,
+                    'message': 'Only admins or managers can change the active status.',
+                }, status=status.HTTP_403_FORBIDDEN)
 
         # Proceed with partial update (allow missing fields)
         serializer = UserProfileEditSerializer(user_to_update, data=request.data, partial=True)
