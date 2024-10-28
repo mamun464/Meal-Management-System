@@ -165,7 +165,7 @@ class UserProfileEditSerializer(serializers.ModelSerializer):
      class Meta:
           model = CustomUser
           exclude = ['is_staff','is_superuser']
-          read_only_fields = ['role']
+          read_only_fields = ['is_manager','role']
 
 class ChangeManagerSerializer(serializers.ModelSerializer):
      class Meta:
