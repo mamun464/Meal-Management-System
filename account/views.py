@@ -211,9 +211,9 @@ class UserDeleteView(APIView):
             user.delete()
             return Response({
                 'success': True,
-                'status': status.HTTP_204_NO_CONTENT,
+                'status': status.HTTP_200_OK,
                 'message': f"User {user.fullName} deleted successfully."
-            }, status=status.HTTP_204_NO_CONTENT)
+            }, status=status.HTTP_200_OK)
         except ProtectedError:
             return Response({
                 'success': False,
