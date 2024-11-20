@@ -189,23 +189,45 @@ class UserDeleteView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAdminUser]
     renderer_classes = [UserRenderer]
-
     def delete(self, request, id):
         try:
             user = CustomUser.objects.get(id=id)
         except CustomUser.DoesNotExist:
-            return Response({'errors': f"{id} isn't Found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({
+                'success': False,
+                'status': status.HTTP_404_NOT_FOUND,
+                'message': f"User with ID {id} not found."
+            }, status=status.HTTP_404_NOT_FOUND)
 
-        # Check if the user is a staff or superuser
+        # Check if the user is a superuser
         if user.is_superuser:
-            return Response({'msg': 'Deletion of same or upper post accounts is not allowed.'}, status=status.HTTP_403_FORBIDDEN)
+            return Response({
+                'success': False,
+                'status': status.HTTP_403_FORBIDDEN,
+                'message': 'Deletion of superuser accounts is not allowed.'
+            }, status=status.HTTP_403_FORBIDDEN)
 
         try:
             user.delete()
-        except ProtectedError as e:
-            return Response({'msg': f'User {user.fullName} cannot be deleted because they have data in other DB.'}, status=status.HTTP_403_FORBIDDEN)
+            return Response({
+                'success': True,
+                'status': status.HTTP_204_NO_CONTENT,
+                'message': f"User {user.fullName} deleted successfully."
+            }, status=status.HTTP_204_NO_CONTENT)
+        except ProtectedError:
+            return Response({
+                'success': False,
+                'status': status.HTTP_403_FORBIDDEN,
+                'message': f"User {user.fullName} cannot be deleted because they are referenced in other database entries."
+            }, status=status.HTTP_403_FORBIDDEN)
 
-        return Response({'msg': f'{user.fullName} deleted from your system'}, status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'status': status.HTTP_500_INTERNAL_SERVER_ERROR,
+                'message': "An unexpected error occurred while deleting the user.",
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 class UserStatusChangeView(APIView):
     authentication_classes = [JWTAuthentication]
