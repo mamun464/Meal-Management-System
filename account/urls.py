@@ -2,7 +2,7 @@
 # from django.contrib import admin
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView,TokenRefreshView,TokenVerifyView
-from account.views import UserRegistrationView,UserLoginView,UserProfileView,UserPasswordChangeView,SendPasswordResetEmailView,UserPasswordResetView,UserDeleteView,UserEditView,LogoutAPIView,ChangeManagerView,AllUserListView,ActiveUserListView,DeactiveUserListView,UserStatusChangeView,PhotoUpload
+from account.views import *
 
 urlpatterns = [
     path('register/', UserRegistrationView.as_view(),name='register'),
@@ -12,6 +12,7 @@ urlpatterns = [
     path('send-rest-password-email/', SendPasswordResetEmailView.as_view(),name='send-rest-password-email'),
     path('rest-password/<uid>/<token>/', UserPasswordResetView.as_view(),name='rest-password'),
     path('delete/<id>/', UserDeleteView.as_view(),name='delete-user'),
+    path('delete-bulk/', BulkDeleteUsersView.as_view(),name='bulk-delete-user'),
     path('update/', UserEditView.as_view(),name='edit-user'),
     path('status-change/<id>/', UserStatusChangeView.as_view(),name='status-change'),
     path('logout/', LogoutAPIView.as_view(), name='api_logout'),

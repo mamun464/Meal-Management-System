@@ -185,6 +185,54 @@ class UserPasswordResetView(APIView):
     
 #for deleted user
 
+class BulkDeleteUsersView(APIView):
+    """
+    API endpoint to delete multiple users by their IDs with checks for manager roles.
+    """
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminUser]
+    renderer_classes = [UserRenderer]
+
+    def delete(self, request, *args, **kwargs):
+        user_ids = request.data.get('user_ids', [])
+        if not isinstance(user_ids, list) or not user_ids:
+            return Response({
+                'success': False,
+                'status': status.HTTP_400_BAD_REQUEST,
+                'message': "Invalid input. 'user_ids' should be a non-empty list."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        deleted_users = []
+
+        for user_id in user_ids:
+            try:
+                user = CustomUser.objects.get(id=user_id)
+
+                # Prevent deletion of superusers
+                if user.is_superuser:
+                    continue
+
+                # Prevent deletion of managers
+                if user.is_manager:
+                    continue
+
+                # Proceed with deletion
+                user.delete()
+                deleted_users.append(user_id)
+            except CustomUser.DoesNotExist:
+                continue
+            except ProtectedError:
+                continue
+            except Exception:
+                continue
+
+        return Response({
+            'success': True,
+            'status': status.HTTP_200_OK,
+            'message': "User deletion process completed.",
+            'deleted_ids': deleted_users
+        }, status=status.HTTP_200_OK)
+
 class UserDeleteView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAdminUser]
@@ -205,6 +253,12 @@ class UserDeleteView(APIView):
                 'success': False,
                 'status': status.HTTP_403_FORBIDDEN,
                 'message': 'Deletion of superuser accounts is not allowed.'
+            }, status=status.HTTP_403_FORBIDDEN)
+        elif user.is_manager:
+            return Response({
+                'success': False,
+                'status': status.HTTP_403_FORBIDDEN,
+                'message': 'Please change the manager first before deleting the user.'
             }, status=status.HTTP_403_FORBIDDEN)
 
         try:
