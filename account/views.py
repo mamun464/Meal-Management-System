@@ -194,13 +194,19 @@ class BulkDeleteUsersView(APIView):
     renderer_classes = [UserRenderer]
 
     def delete(self, request, *args, **kwargs):
-        user_ids = request.data.get('user_ids', [])
-        if not isinstance(user_ids, list) or not user_ids:
-            return Response({
-                'success': False,
-                'status': status.HTTP_400_BAD_REQUEST,
-                'message': "Invalid input. 'user_ids' should be a non-empty list."
-            }, status=status.HTTP_400_BAD_REQUEST)
+        # Ensure the data is a list
+        if not isinstance(request.data, list):
+            return Response(
+                {
+                    "success": False,
+                    "status": 400,
+                    "message": "Invalid data format. A list of user IDs is required."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user_ids = request.data
+
 
         deleted_users = []
 
