@@ -14,6 +14,7 @@ from pathlib import Path
 from datetime import timedelta
 import os
 import dj_database_url
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -103,6 +104,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'MealAPP.wsgi.application'
 
+EMAIL_BACKEND = config("EMAIL_BACKEND")
+EMAIL_HOST = config("EMAIL_HOST")
+EMAIL_PORT = config("EMAIL_PORT", cast=int)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", cast=bool)
+
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
@@ -114,7 +122,9 @@ DATABASES = {
     }
 }
 
-DATABASES["default"] = dj_database_url.parse("postgresql://mamun_464:TYXDEWKlPLZroxfXCEbE7lvGLzrDqfZz@dpg-csb8fl3tq21c738o7m60-a.oregon-postgres.render.com/meal_db_k9j3")
+
+
+DATABASES["default"] = dj_database_url.parse("postgresql://mamun_464:QIcDLP5nfGKDKrT07eWrlyhjWov7m8mv@dpg-csv1p5rtq21c73drkmig-a.oregon-postgres.render.com/meal_db_qf94")
 
 REST_FRAMEWORK = {
     # Custom custom_exception_handler funtion add here. you can find in exception.py file

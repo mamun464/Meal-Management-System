@@ -14,7 +14,10 @@ from django.utils import timezone
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.db.models import ProtectedError
 from django.contrib.auth import logout
+from account.utils import Util
 import requests
+import random
+import string
 
 
 def get_tokens_for_user(user):
@@ -36,7 +39,7 @@ class UserRegistrationView(APIView):
 
         self.check_permissions(request)
 
-        required_fields = ['email', 'fullName','email', 'phone_no','password', 'password2']
+        required_fields = ['email', 'fullName','email', 'phone_no']
         for field in required_fields:
             if field not in request.data or not request.data[field]:
                 return Response({
@@ -44,21 +47,52 @@ class UserRegistrationView(APIView):
                     'status': status.HTTP_400_BAD_REQUEST,
                     'message': f'{field} is missing or empty',
                 }, status=status.HTTP_400_BAD_REQUEST)
-        serializer = UserRegistrationSerializer(data=request.data)
+            
+        # Generate an 8-digit random password
+        password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+        print("Password: ", password)
+
+        # Create a mutable copy of the request data
+        data = request.data.copy()
+        data['password'] = password
+        data['password2'] = password
+
+        serializer = UserRegistrationSerializer(data=data)
 
         if serializer.is_valid():
             user = serializer.save()
             token=get_tokens_for_user(user)
             user_serializer = UserProfileSerializer(user)
             user_data = user_serializer.data
-            return Response({
-                'success': True,
-                'status': status.HTTP_200_OK,
-                'message': 'Registration successful',
-                'token': token,
-                'new_user': user_data,
-                
-                },status=status.HTTP_200_OK)
+
+            #Send the Mail OTP verification
+            bodyContent = f"Here is your Password: {password} \nPlease don't share it with anyone and change it after login"
+            data={
+                'subject': 'MMS Credentials',
+                'body': bodyContent,
+                'to_email': user.email,
+
+            }
+
+            email_sent=Util.send_email(data)
+            if email_sent:
+                return Response({
+                    'success': True,
+                    'status': status.HTTP_200_OK,
+                    'message': 'Registration successful and credentials sent to your email',
+                    'token': token,
+                    'new_user': user_data,
+                    
+                    },status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    'success': True,
+                    'status': status.HTTP_200_OK,
+                    'message': 'Registration successful but mail not sent Please reset your credentials',
+                    'new_user': user_data,
+                    'token': token,
+                    
+                }, status=status.HTTP_200_OK)
         
         
         else:
@@ -268,11 +302,15 @@ class UserDeleteView(APIView):
             }, status=status.HTTP_403_FORBIDDEN)
 
         try:
+            user_id = user.id
+            # Convert the single ID to a string
+            deleted_users = str(user_id)
             user.delete()
             return Response({
                 'success': True,
                 'status': status.HTTP_200_OK,
-                'message': f"User {user.fullName} deleted successfully."
+                'message': f"User {user.fullName} deleted successfully.",
+                 'deleted_ids': deleted_users
             }, status=status.HTTP_200_OK)
         except ProtectedError:
             return Response({
