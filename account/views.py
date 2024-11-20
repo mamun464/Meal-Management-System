@@ -50,7 +50,8 @@ class UserRegistrationView(APIView):
             
         # Generate an 8-digit random password
         password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
-        print("Password: ", password)
+        # for development purposes it will be removed after deployment
+        password = "123456"
 
         # Create a mutable copy of the request data
         data = request.data.copy()
