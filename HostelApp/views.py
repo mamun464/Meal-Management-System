@@ -13,9 +13,10 @@ from django.db.models import Q
 import datetime as dt_datetime
 # from datetime import datetime as dt_datetime, date as dt_date
 from datetime import datetime, date
-from rest_framework.permissions import IsAuthenticated,IsAdminUser
+from rest_framework.permissions import IsAuthenticated,IsAdminUser,IsOperationPermission
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.views import exception_handler
+from rest_framework.exceptions import ValidationError
 
 
 from django.core.serializers.json import DjangoJSONEncoder
@@ -282,25 +283,81 @@ class MealRateView(APIView):
 class MealEntryView(APIView):
     renderer_classes = [UserRenderer]
     authentication_classes = [JWTAuthentication]
-    #permission_classes = [IsAdminUser]
+    permission_classes = [IsOperationPermission]
 
     def post(self, request, format=None):
-        serializer = MealEntrySerializer(data=request.data)
+        required_fields = ['user', 'date','lunch', 'dinner']
+        
+        for field in required_fields:
+            if field not in request.data or not request.data[field]:
+                return Response({
+                    'success': False,
+                    'status': status.HTTP_400_BAD_REQUEST,
+                    'message': f'{field} is missing or empty',
+                }, status=status.HTTP_400_BAD_REQUEST)
+        updated_by_user = request.user
+        body_data = request.data.copy()
+        body_data['last_updated_by'] = updated_by_user.id
+        # Check for existing meal entry
+        user = body_data['user']
+        date = body_data['date']
+        if MealHistory.objects.filter(user_id=user, date=date).exists():
+            return Response({
+                'success': False,
+                'status': 400,
+                'message': 'Already a meal entry exists. Please update the existing entry.',
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = MealEntrySerializer(data=body_data)
 
-        if serializer.is_valid(raise_exception=True):
-            self.perform_create(serializer)
-            return Response({'msg': 'Successfully added Meal'}, status=status.HTTP_201_CREATED)
+        try:
+            if serializer.is_valid(raise_exception=True):
+                self.perform_create(serializer)
+                return Response({
+                    'success': True,
+                    'status': 200,
+                    'message': 'Successfully added Meal'
+                }, status=status.HTTP_200_OK)
+        except ValidationError as exc:
+            # Handle validation errors and return all the error messages
+            error_messages = self._extract_all_error_messages(exc)
+            return Response({
+                'success': False,
+                'status': 400,
+                'message': error_messages,
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'success': False, 'status': 400, 'message': 'Invalid data'}, status=status.HTTP_400_BAD_REQUEST)
 
     def perform_create(self, serializer):
         # Check if the user is active before saving the meal entry
         user = serializer.validated_data['user']
 
         if not user.is_active:
-            raise serializers.ValidationError({'user': 'User is not active for this month.'})
+            raise serializers.ValidationError("User is not active for this month.")
+        if user.is_superuser:
+            raise serializers.ValidationError("You can't add meal for this user")
 
         serializer.save()
+
+    def _extract_all_error_messages(self, exc):
+        """
+        Extracts all error messages from the ValidationError in a list format.
+        """
+        error_messages = []
+        if isinstance(exc.detail, dict):
+            # Iterate over all the fields and collect error messages
+            for field, messages in exc.detail.items():
+                for msg in messages:
+                    error_messages.append(f"{field}: {msg}")
+        elif isinstance(exc.detail, list):
+            # If it's a list, return all errors
+            for msg in exc.detail:
+                error_messages.append(str(msg))
+        else:
+            error_messages.append(str(exc.detail))
+
+        return ', '.join(error_messages)
     
 
 class MealEditView(APIView):

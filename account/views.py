@@ -7,7 +7,7 @@ from django.contrib.auth import authenticate,login
 from rest_framework.exceptions import AuthenticationFailed,ValidationError
 from account.renderers import UserRenderer
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.permissions import IsAuthenticated,IsAdminUser
+from rest_framework.permissions import IsAuthenticated,IsAdminUser,IsOperationPermission
 from account.models import CustomUser
 from rest_framework.renderers import JSONRenderer
 from django.utils import timezone
@@ -32,7 +32,7 @@ def get_tokens_for_user(user):
 class UserRegistrationView(APIView):
     renderer_classes = [UserRenderer]
     authentication_classes = [JWTAuthentication]
-    permission_classes = []
+    permission_classes = [IsOperationPermission]
     def post(self,request,format=None):
         # IsAuthenticated applied
         self.permission_classes = [IsAdminUser]
@@ -350,8 +350,9 @@ class UserStatusChangeView(APIView):
         return Response({'msg': f'User {user.fullName} status-change in database'}, status=status.HTTP_200_OK)
 
 class UserEditView(APIView):
-    renderer_classes = [UserRenderer]
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
+    renderer_classes = [UserRenderer]
 
     def put(self, request, *args, **kwargs):
         user = request.user
@@ -398,6 +399,7 @@ class UserEditView(APIView):
                     'status': status.HTTP_403_FORBIDDEN,
                     'message': 'Managers cannot change their own active status.',
                 }, status=status.HTTP_403_FORBIDDEN)
+        
             
             # Only allow admins or managers to change `is_active`
             if user.role not in ['admin', 'manager']:
@@ -405,6 +407,15 @@ class UserEditView(APIView):
                     'success': False,
                     'status': status.HTTP_403_FORBIDDEN,
                     'message': 'Only admins or managers can change the active status.',
+                }, status=status.HTTP_403_FORBIDDEN)
+
+        # Check if `role` is being updated
+        if user_to_update.role in ['admin', 'manager']:
+            if user_to_update.is_active != request.data.get('is_active'):
+                return Response({
+                    'success': False,
+                    'status': status.HTTP_403_FORBIDDEN,
+                    'message': 'You cannot change the Status of an Admin or Manager.',
                 }, status=status.HTTP_403_FORBIDDEN)
 
         # Proceed with partial update (allow missing fields)
@@ -450,9 +461,11 @@ class UserEditView(APIView):
 
 class ChangeManagerView(APIView):
     renderer_classes = [UserRenderer]
-    permission_classes = [IsAdminUser]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsOperationPermission]
 
     def put(self, request):
+        update_user_list=[]
         newManager_id = request.query_params.get('newManager_id', None)
 
         if newManager_id is None:
@@ -487,6 +500,13 @@ class ChangeManagerView(APIView):
                 'message': 'Current manager not found.'
             }, status=status.HTTP_400_BAD_REQUEST)
 
+        if nextManager.is_manager:
+            return Response({
+                'success': False,
+                'status': status.HTTP_400_BAD_REQUEST,
+                'message': 'Selected user is already a manager'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        # Change Manager ship
         if nextManager.is_superuser:
             return Response({
                 'success': False,
@@ -504,37 +524,50 @@ class ChangeManagerView(APIView):
                         nextManager_serializer = ChangeManagerSerializer(nextManager, {'is_staff': True, 'is_manager': True,'role': 'manager'}, partial=True)
                         nextManager_serializer.is_valid(raise_exception=True)
                         nextManager_serializer.save()
+                        managersData= UserProfileSerializer(nextManager).data
+                        update_user_list.append(managersData)
 
                         currentManager_serializer = ChangeManagerSerializer(searchManager, {'is_staff': False, 'is_manager': False,'role': 'member'}, partial=True)
                         currentManager_serializer.is_valid(raise_exception=True)
                         currentManager_serializer.save()
+                        managersData= UserProfileSerializer(searchManager).data
+                        update_user_list.append(managersData)
                         return Response({
                             'success': True,
                             'status': status.HTTP_200_OK,
-                            'message': 'Manager changed successfully'
+                            'message': 'Manager changed successfully',
+                            'data': update_user_list
                         }, status=status.HTTP_200_OK)
                 else:
                     nextManager_serializer = ChangeManagerSerializer(nextManager, {'is_staff': True, 'is_manager': True,'role': 'manager'}, partial=True)
                     nextManager_serializer.is_valid(raise_exception=True)
                     nextManager_serializer.save()
+                    managersData= UserProfileSerializer(nextManager).data
+                    update_user_list.append(managersData)
                     return Response({
                             'success': True,
                             'status': status.HTTP_200_OK,
-                            'message': 'Manager changed successfully'
+                            'message': 'Manager changed successfully',
+                            'data': update_user_list
                         }, status=status.HTTP_200_OK)
                 
             
             nextManager_serializer = ChangeManagerSerializer(nextManager, {'is_staff': True, 'is_manager': True,'role': 'manager'}, partial=True)
             nextManager_serializer.is_valid(raise_exception=True)
             nextManager_serializer.save()
+            managersData= UserProfileSerializer(nextManager).data
+            update_user_list.append(managersData)
 
             currentManager_serializer = ChangeManagerSerializer(currentManager, {'is_staff': False, 'is_manager': False,'role': 'member'}, partial=True)
             currentManager_serializer.is_valid(raise_exception=True)
             currentManager_serializer.save()
+            managersData= UserProfileSerializer(currentManager).data
+            update_user_list.append(managersData)
             return Response({
                 'success': True,
                 'status': status.HTTP_200_OK,
-                'message': 'Manager changed successfully'
+                'message': 'Manager changed successfully',
+                'data': update_user_list
             }, status=status.HTTP_200_OK)
         
         else:
@@ -546,12 +579,19 @@ class ChangeManagerView(APIView):
 
 
 class AllUserListView(APIView):
-    # permission_classes = [IsAdminUser]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    renderer_classes = [UserRenderer]
 
     def get(self, request):
         try:
-            # Retrieve all active users
-            active_users = CustomUser.objects.filter(is_superuser=False)
+            # Check if the requesting user is a superuser
+            if request.user.is_superuser:
+                # Retrieve all users from the database
+                active_users = CustomUser.objects.all()
+            else:
+                # Retrieve only the current user's data
+                active_users = CustomUser.objects.filter(is_superuser=False)
 
             # Serialize the active users
             serializer = AllUserListSerializer(active_users, many=True)

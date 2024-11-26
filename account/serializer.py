@@ -164,7 +164,7 @@ class UserPasswordRestSerializer(serializers.Serializer):
 class UserProfileEditSerializer(serializers.ModelSerializer):
      class Meta:
           model = CustomUser
-          exclude = ['is_staff','is_superuser']
+          exclude = ['is_staff','is_superuser','password']
           read_only_fields = ['is_manager','role']
 
 class ChangeManagerSerializer(serializers.ModelSerializer):

@@ -1,6 +1,7 @@
 
 from django.db.models import F
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 # Create your models here.
 
@@ -18,6 +19,16 @@ class MealHistory(models.Model):
     lunch = models.DecimalField(max_digits=6, decimal_places=2, default=0)
     dinner = models.DecimalField(max_digits=6, decimal_places=2, default=0)
     meal_sum_per_day = models.DecimalField(max_digits=6, decimal_places=2, default=0, editable=False)
+
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    updated_at = models.DateTimeField(auto_now=True,null=True)
+    last_updated_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.PROTECT,
+        related_name='meal_history_updated',
+        null=True,
+        blank=True
+    )
 
     def save(self, *args, **kwargs):
         if not self.pk:
