@@ -124,7 +124,7 @@ DATABASES = {
 
 
 
-DATABASES["default"] = dj_database_url.parse("postgresql://mamun_464:QIcDLP5nfGKDKrT07eWrlyhjWov7m8mv@dpg-csv1p5rtq21c73drkmig-a.oregon-postgres.render.com/meal_db_qf94")
+DATABASES["default"] = dj_database_url.parse("postgresql://mamun_464:lbDq7KbSXbPngLymVHy6iHyjv8HaxIHE@dpg-cti0mrbtq21c739vfu80-a.oregon-postgres.render.com/scents_orbit_3qvj")
 
 REST_FRAMEWORK = {
     # Custom custom_exception_handler funtion add here. you can find in exception.py file
